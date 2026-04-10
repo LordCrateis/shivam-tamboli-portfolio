@@ -4,7 +4,7 @@ const BIO_FACTS = [
   { label: 'Location', value: 'India' },
   { label: 'Education', value: 'BSc Data Science, MIT ACSC' },
   { label: 'Focus Area', value: 'ML Research & Engineering' },
-  { label: 'Specialization', value: 'Deep Learning, Consciousness Models' },
+  { label: 'Specialization', value: 'Data Analytics, Machine Learning' },
 ];
 
 export default function About() {
@@ -85,7 +85,7 @@ export default function About() {
                 S.A.C.
               </h3>
               <p className="font-sans text-xs text-ink-muted tracking-wider uppercase mb-3">
-                Schrödinger's Artificial Conscious
+                Schrödinger's Artificial Consciousness
               </p>
               <p className="font-sans text-sm text-ink-muted leading-relaxed">
                 A theoretical framework exploring the superposition of machine states as an analog for
