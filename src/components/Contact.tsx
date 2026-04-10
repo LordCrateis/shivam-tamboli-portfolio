@@ -23,7 +23,7 @@ export default function Contact() {
 
       <div className="mb-16">
         <motion.a
-          href="mailto:shivamtamboli@example.com"
+          href="mailto:shivamrtamboli62@gmmail.com"
           className="font-serif text-ink leading-none tracking-tight block group w-fit"
           style={{ fontSize: 'clamp(3.5rem, 10vw, 9rem)' }}
           initial={{ opacity: 0, y: 40 }}
@@ -50,7 +50,7 @@ export default function Contact() {
       >
         <div className="flex items-center gap-8">
           <a
-            href="https://github.com/shivamtamboli"
+            href="https://github.com/LordCrateis"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 font-sans text-sm text-ink-muted hover:text-ink transition-colors duration-200 group"
@@ -61,7 +61,7 @@ export default function Contact() {
             <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
           </a>
           <a
-            href="mailto:shivamtamboli@example.com"
+            href="mailto:shivamrtamboli62@gmail.com"
             className="flex items-center gap-2 font-sans text-sm text-ink-muted hover:text-ink transition-colors duration-200 group"
             data-cursor="pointer"
           >
