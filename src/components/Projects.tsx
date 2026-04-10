@@ -10,38 +10,7 @@ const PROJECTS = [
     tags: ['Python', 'scikit-learn', 'Flask', 'TensorFlow', 'REST API'],
     year: '2024',
     status: 'Deployed',
-  },
-  {
-    index: '02',
-    title: 'SAC Consciousness Model',
-    description: "Implementation of the Schrödinger's Artificial Conscious framework. A transformer-based architecture that maintains probabilistic state distributions across inference passes, modeling pre-collapse awareness.",
-    tags: ['PyTorch', 'Transformers', 'NumPy', 'Quantum Probability', 'Research'],
-    year: '2024',
-    status: 'Research',
-  },
-  {
-    index: '03',
-    title: 'GradientScope',
-    description: 'Real-time gradient visualization toolkit for deep neural networks. Provides layer-by-layer saliency maps and attention flow diagrams during training, making the learning process legible.',
-    tags: ['Python', 'Matplotlib', 'PyTorch', 'Dash', 'WebSockets'],
-    year: '2023',
-    status: 'Open Source',
-  },
-  {
-    index: '04',
-    title: 'SentimentCore',
-    description: 'Fine-tuned BERT variant for domain-specific sentiment analysis in academic literature. Handles epistemic uncertainty and hedging language unique to research writing.',
-    tags: ['HuggingFace', 'BERT', 'Python', 'FastAPI', 'PostgreSQL'],
-    year: '2023',
-    status: 'Deployed',
-  },
-  {
-    index: '05',
-    title: 'DataMesh Pipeline',
-    description: 'Distributed ETL pipeline for large-scale tabular datasets. Automates feature engineering, drift detection, and schema versioning across heterogeneous data sources.',
-    tags: ['Apache Spark', 'Airflow', 'Python', 'Docker', 'GCP'],
-    year: '2023',
-    status: 'Internal',
+    link: 'https://nutricore-ai-production.up.railway.app/',
   },
 ];
 
@@ -84,6 +53,15 @@ export default function Projects() {
               onMouseLeave={() => setHovered(null)}
               data-cursor="pointer"
             >
+              {project.link && (
+                <a
+                  href={project.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute inset-0 z-10"
+                ></a>
+              )}
+
               <motion.div
                 className="absolute left-0 top-0 bottom-0 w-0.5 bg-ink"
                 initial={{ scaleY: 0 }}

@@ -7,7 +7,6 @@ import Nav from './components/Nav';
 import Hero from './components/Hero';
 import About from './components/About';
 import Projects from './components/Projects';
-import InferenceTerminal from './components/Terminal';
 import Stack from './components/Stack';
 import Contact from './components/Contact';
 
@@ -33,7 +32,6 @@ export default function App() {
               <Hero />
               <About />
               <Projects />
-              <InferenceTerminal />
               <Stack />
               <Contact />
             </main>
