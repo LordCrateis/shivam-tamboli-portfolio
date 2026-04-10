@@ -41,7 +41,7 @@ export default function Nav() {
       </div>
 
       <a
-        href="mailto:shivamtamboli@example.com"
+        href="mailto:shivamrtamboli62@gmail.com"
         className="font-sans text-xs bg-ink text-cream px-4 py-2 hover:bg-ink-light transition-colors duration-200 tracking-wide"
         data-cursor="pointer"
       >
