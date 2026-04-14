@@ -10,7 +10,7 @@ const PROJECTS = [
     tags: ['Python', 'scikit-learn', 'Flask', 'TensorFlow', 'REST API'],
     year: '2024',
     status: 'Deployed',
-    link: 'https://nutricore-ai-production.up.railway.app/',
+    link: 'https://nutricore.shivambuilds.dev',
   },
 ];
 
