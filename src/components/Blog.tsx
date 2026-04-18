@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
-import { ArrowUpRight, LogOut, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, LogOut, Pencil, Plus, Trash2 } from 'lucide-react';
 import FadeUp from './FadeUp';
 import { supabase } from '../lib/supabase';
 
@@ -495,45 +495,7 @@ export default function Blog() {
   };
 
   const insertList = (listType: 'ul' | 'ol') => {
-    const editor = contentRef.current;
-    if (!editor) {
-      return;
-    }
-
-    editor.focus();
-    restoreEditorSelection();
-
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) {
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-    const selectedLines = selection
-      .toString()
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean);
-    const list = document.createElement(listType);
-    const listItems = selectedLines.length > 0 ? selectedLines : ['List item'];
-
-    for (const line of listItems) {
-      const item = document.createElement('li');
-      item.textContent = line;
-      list.appendChild(item);
-    }
-
-    range.deleteContents();
-    range.insertNode(list);
-
-    const nextRange = document.createRange();
-    nextRange.selectNodeContents(list.lastElementChild ?? list);
-    nextRange.collapse(false);
-    selection.removeAllRanges();
-    selection.addRange(nextRange);
-
-    saveEditorSelection();
-    syncEditorContent();
+    runCommand(listType === 'ul' ? 'insertUnorderedList' : 'insertOrderedList');
   };
 
   return (
@@ -679,20 +641,26 @@ export default function Blog() {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
-                  <select
-                    value={editor.category}
-                    onChange={(event) =>
-                      setEditor((prev) => ({ ...prev, category: event.target.value }))
-                    }
-                    aria-label="Post category"
-                    className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
-                  >
-                    {BLOG_CATEGORIES.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={editor.category}
+                      onChange={(event) =>
+                        setEditor((prev) => ({ ...prev, category: event.target.value }))
+                      }
+                      aria-label="Post category"
+                      className="blog-category-select"
+                    >
+                      {BLOG_CATEGORIES.map((category) => (
+                        <option key={category} value={category}>
+                          {category}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={14}
+                      className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted"
+                    />
+                  </div>
                   <label className="flex items-center gap-2 border border-ink/20 px-4 py-3 text-sm text-ink">
                     <input
                       type="checkbox"
@@ -748,7 +716,7 @@ export default function Blog() {
                   <div
                     ref={contentRef}
                     contentEditable
-                    className="min-h-52 p-4 outline-none text-sm leading-relaxed"
+                    className="editor-rich-content min-h-52 p-4 outline-none text-sm leading-relaxed"
                     onInput={(event) =>
                       (() => {
                         isUserEditingRef.current = true;
@@ -917,7 +885,7 @@ export default function Blog() {
               </p>
 
               <div
-                className="font-sans text-base md:text-lg text-ink leading-relaxed space-y-4 [&_a]:underline [&_a]:underline-offset-2"
+                className="blog-rich-content font-sans text-base md:text-lg text-ink leading-relaxed space-y-4 [&_a]:underline [&_a]:underline-offset-2"
                 dangerouslySetInnerHTML={{
                   __html: sanitizeRichHtml(activePost.content),
                 }}

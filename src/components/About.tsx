@@ -62,10 +62,10 @@ export default function About() {
                 <tbody>
                   {BIO_FACTS.map((fact) => (
                     <tr key={fact.label} className="border-b border-ink/8">
-                      <td className="py-3 pr-6 font-sans text-xs text-ink-muted uppercase tracking-wide w-36">
+                      <td className="py-3 pr-4 sm:pr-6 font-sans text-xs text-ink-muted uppercase tracking-wide w-28 sm:w-36 align-top">
                         {fact.label}
                       </td>
-                      <td className="py-3 font-sans text-sm text-ink font-medium">
+                      <td className="py-3 font-sans text-sm text-ink font-medium break-words">
                         {fact.value}
                       </td>
                     </tr>
