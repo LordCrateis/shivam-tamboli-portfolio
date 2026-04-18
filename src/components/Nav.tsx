@@ -8,6 +8,11 @@ const NAV_LINKS = [
   { label: 'Blog', href: '#/blog' },
 ];
 
+const BLOG_NAV_LINKS = [
+  { label: 'Home', href: '#' },
+  { label: 'Contact', href: 'mailto:shivamrtamboli62@gmail.com' },
+];
+
 interface NavProps {
   isBlogPage?: boolean;
 }
@@ -16,7 +21,7 @@ export default function Nav({ isBlogPage = false }: NavProps) {
   const { scrollY } = useScroll();
   const borderOpacity = useTransform(scrollY, [0, 80], [0, 0.12]);
   const borderColor = useTransform(borderOpacity, (v) => `rgba(17,17,17,${v})`);
-  const links = isBlogPage ? [{ label: 'Home', href: '#' }, { label: 'Contact', href: 'mailto:shivamrtamboli62@gmail.com' }] : NAV_LINKS;
+  const links = isBlogPage ? BLOG_NAV_LINKS : NAV_LINKS;
 
   return (
     <motion.nav

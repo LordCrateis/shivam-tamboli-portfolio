@@ -32,11 +32,13 @@ const POSTS = [
 ];
 
 export default function Blog() {
+  const currentYear = new Date().getFullYear();
+
   return (
     <section className="pt-28 pb-20 px-6 md:px-12 lg:px-16 min-h-screen">
       <FadeUp>
         <p className="terminal-text text-xs text-ink-muted tracking-widest uppercase mb-10">
-          Journal — 2026
+          Journal — {currentYear}
         </p>
       </FadeUp>
 
@@ -58,7 +60,7 @@ export default function Blog() {
       <div className="border-t border-ink/10 divide-y divide-ink/10">
         {POSTS.map((post, i) => (
           <FadeUp key={post.index} delay={0.16 + i * 0.07}>
-            <article className="group py-8">
+            <article className="py-8">
               <div className="flex flex-col lg:flex-row lg:items-start gap-5 lg:gap-8">
                 <p className="terminal-text text-xs text-ink-muted shrink-0 w-8 mt-1">{post.index}</p>
 
@@ -70,7 +72,7 @@ export default function Blog() {
                       {post.category}
                     </span>
                   </div>
-                  <h2 className="font-serif text-2xl md:text-3xl text-ink mb-3 group-hover:opacity-70 transition-opacity duration-200">
+                  <h2 className="font-serif text-2xl md:text-3xl text-ink mb-3">
                     {post.title}
                   </h2>
                   <p className="font-sans text-sm md:text-base text-ink-muted leading-relaxed max-w-3xl">
@@ -80,7 +82,7 @@ export default function Blog() {
 
                 <ArrowUpRight
                   size={18}
-                  className="text-ink-muted lg:mt-1 shrink-0 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-200"
+                  className="text-ink-muted lg:mt-1 shrink-0"
                 />
               </div>
             </article>
