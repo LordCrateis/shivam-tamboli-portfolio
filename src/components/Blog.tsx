@@ -4,7 +4,7 @@ import { ArrowUpRight, ChevronDown, LogOut, Pencil, Plus, Trash2 } from 'lucide-
 import FadeUp from './FadeUp';
 import { supabase } from '../lib/supabase';
 
-type BlogMode = 'visitor' | 'team';
+type BlogMode = 'visitor' | 'shivam';
 
 type RouteState =
   | { kind: 'gateway' }
@@ -546,7 +546,7 @@ export default function Blog() {
               data-cursor="pointer"
             >
               <p className="terminal-text text-xs text-ink-muted uppercase mb-3">Editor access</p>
-              <h2 className="font-serif text-3xl text-ink mb-3">Shivam</h2>
+              <h2 className="font-serif text-3xl text-ink mb-3">Team</h2>
               <p className="font-sans text-sm text-ink-muted leading-relaxed">
                 Login first, then add, edit, delete, and publish or draft blogs.
               </p>
