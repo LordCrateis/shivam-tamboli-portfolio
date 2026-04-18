@@ -648,7 +648,7 @@ export default function Blog() {
                         setEditor((prev) => ({ ...prev, category: event.target.value }))
                       }
                       aria-label="Post category"
-                      className="w-full border border-ink/20 bg-transparent px-4 py-3 pr-10 text-sm text-ink outline-none appearance-none font-sans rounded-none"
+                      className="blog-category-select"
                     >
                       {BLOG_CATEGORIES.map((category) => (
                         <option key={category} value={category}>
@@ -716,7 +716,7 @@ export default function Blog() {
                   <div
                     ref={contentRef}
                     contentEditable
-                    className="min-h-52 p-4 outline-none text-sm leading-relaxed [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_ul]:my-3 [&_ol]:my-3 [&_li]:my-1"
+                    className="editor-rich-content min-h-52 p-4 outline-none text-sm leading-relaxed"
                     onInput={(event) =>
                       (() => {
                         isUserEditingRef.current = true;
@@ -885,7 +885,7 @@ export default function Blog() {
               </p>
 
               <div
-                className="font-sans text-base md:text-lg text-ink leading-relaxed space-y-4 [&_a]:underline [&_a]:underline-offset-2 [&_a]:break-all [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-7 [&_ol]:pl-7 [&_ul]:my-4 [&_ol]:my-4 [&_li]:my-1"
+                className="blog-rich-content font-sans text-base md:text-lg text-ink leading-relaxed space-y-4 [&_a]:underline [&_a]:underline-offset-2"
                 dangerouslySetInnerHTML={{
                   __html: sanitizeRichHtml(activePost.content),
                 }}
