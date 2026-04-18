@@ -12,7 +12,7 @@ type RouteState =
   | { kind: 'detail'; slug: string };
 
 interface BlogPost {
-  id: number;
+  id: string;
   title: string;
   slug: string;
   excerpt: string;
@@ -24,7 +24,7 @@ interface BlogPost {
 }
 
 interface EditorState {
-  id: number | null;
+  id: string | null;
   title: string;
   slug: string;
   excerpt: string;
@@ -34,6 +34,8 @@ interface EditorState {
 }
 
 const SHIVAM_EDITOR_EMAIL = 'shivamrtamboli62@gmail.com';
+const BLOG_CATEGORIES = ['General', 'Engineering', 'Machine Learning', 'Career', 'Life'] as const;
+const PG_UNDEFINED_TABLE_ERROR_CODE = '42P01';
 
 const EMPTY_EDITOR: EditorState = {
   id: null,
@@ -44,6 +46,14 @@ const EMPTY_EDITOR: EditorState = {
   category: 'General',
   published: false,
 };
+
+function normalizeCategory(category: string | null | undefined): string {
+  if (!category) {
+    return 'General';
+  }
+
+  return BLOG_CATEGORIES.includes(category as (typeof BLOG_CATEGORIES)[number]) ? category : 'General';
+}
 
 function parseRoute(hashValue: string): RouteState {
   const cleaned = hashValue.replace(/^#\/?/, '');
@@ -180,6 +190,7 @@ export default function Blog() {
   const currentYear = new Date().getFullYear();
   const contentRef = useRef<HTMLDivElement | null>(null);
   const isUserEditingRef = useRef(false);
+  const selectionRef = useRef<Range | null>(null);
 
   const [hashValue, setHashValue] = useState(window.location.hash || '#/blog');
   const route = useMemo(() => parseRoute(hashValue), [hashValue]);
@@ -194,9 +205,48 @@ export default function Blog() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [blogError, setBlogError] = useState<string | null>(null);
-  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const isShivamSession = session?.user?.email === SHIVAM_EDITOR_EMAIL;
+
+  const saveEditorSelection = () => {
+    const editor = contentRef.current;
+    if (!editor) {
+      selectionRef.current = null;
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      selectionRef.current = null;
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const common = range.commonAncestorContainer;
+    const insideEditor = editor.contains(common.nodeType === Node.ELEMENT_NODE ? common : common.parentNode);
+
+    selectionRef.current = insideEditor ? range.cloneRange() : null;
+  };
+
+  const restoreEditorSelection = () => {
+    const selection = window.getSelection();
+    if (!selection || !selectionRef.current) {
+      return;
+    }
+
+    selection.removeAllRanges();
+    selection.addRange(selectionRef.current);
+  };
+
+  const syncEditorContent = () => {
+    const latestContent = contentRef.current?.innerHTML ?? '';
+    setEditor((prev) => ({ ...prev, content: latestContent }));
+  };
+
+  const isMissingBlogsTableError = (error: { code?: string; message?: string } | null) =>
+    error?.code === PG_UNDEFINED_TABLE_ERROR_CODE ||
+    /relation ["']?public\.blogs["']? does not exist/i.test(error?.message ?? '');
 
   useEffect(() => {
     const onHashChange = () => setHashValue(window.location.hash || '#/blog');
@@ -261,7 +311,11 @@ export default function Blog() {
 
         const { data, error } = await query;
         if (error) {
-          setBlogError(error.message);
+          if (route.mode === 'visitor' || isMissingBlogsTableError(error)) {
+            setBlogError(null);
+          } else {
+            setBlogError('Unable to load posts right now.');
+          }
           setPosts([]);
         } else {
           setPosts(data ?? []);
@@ -281,7 +335,11 @@ export default function Blog() {
 
         const { data, error } = await query.maybeSingle();
         if (error) {
-          setBlogError(error.message);
+          if (!isShivamSession || isMissingBlogsTableError(error)) {
+            setBlogError(null);
+          } else {
+            setBlogError('Unable to load this post right now.');
+          }
           setActivePost(null);
         } else {
           setActivePost(data ?? null);
@@ -305,7 +363,7 @@ export default function Blog() {
       slug: post.slug,
       excerpt: post.excerpt,
       content: post.content,
-      category: post.category,
+      category: normalizeCategory(post.category),
       published: post.published,
     });
   };
@@ -368,14 +426,14 @@ export default function Blog() {
     if (editor.id) {
       const { error } = await supabase.from('blogs').update(payload).eq('id', editor.id);
       if (error) {
-        setBlogError(error.message);
+        setBlogError('Unable to save this post right now.');
         setSaving(false);
         return;
       }
     } else {
       const { error } = await supabase.from('blogs').insert(payload);
       if (error) {
-        setBlogError(error.message);
+        setBlogError('Unable to save this post right now.');
         setSaving(false);
         return;
       }
@@ -387,7 +445,7 @@ export default function Blog() {
       .order('created_at', { ascending: false });
 
     if (error) {
-      setBlogError(error.message);
+      setBlogError(isMissingBlogsTableError(error) ? null : 'Unable to refresh posts right now.');
     } else {
       setPosts(data ?? []);
       setEditor(EMPTY_EDITOR);
@@ -396,10 +454,10 @@ export default function Blog() {
     setSaving(false);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const { error } = await supabase.from('blogs').delete().eq('id', id);
     if (error) {
-      setBlogError(error.message);
+      setBlogError('Unable to delete this post right now.');
       return;
     }
 
@@ -417,7 +475,7 @@ export default function Blog() {
       .eq('id', post.id);
 
     if (error) {
-      setBlogError(error.message);
+      setBlogError('Unable to update publish status right now.');
       return;
     }
 
@@ -429,9 +487,53 @@ export default function Blog() {
   };
 
   const runCommand = (command: string, value?: string) => {
+    contentRef.current?.focus();
+    restoreEditorSelection();
     document.execCommand(command, false, value);
-    const latestContent = contentRef.current?.innerHTML ?? '';
-    setEditor((prev) => ({ ...prev, content: latestContent }));
+    saveEditorSelection();
+    syncEditorContent();
+  };
+
+  const insertList = (listType: 'ul' | 'ol') => {
+    const editor = contentRef.current;
+    if (!editor) {
+      return;
+    }
+
+    editor.focus();
+    restoreEditorSelection();
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const selectedLines = selection
+      .toString()
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const list = document.createElement(listType);
+    const listItems = selectedLines.length > 0 ? selectedLines : ['List item'];
+
+    for (const line of listItems) {
+      const item = document.createElement('li');
+      item.textContent = line;
+      list.appendChild(item);
+    }
+
+    range.deleteContents();
+    range.insertNode(list);
+
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(list.lastElementChild ?? list);
+    nextRange.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+
+    saveEditorSelection();
+    syncEditorContent();
   };
 
   return (
@@ -577,14 +679,20 @@ export default function Blog() {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
-                  <input
+                  <select
                     value={editor.category}
                     onChange={(event) =>
                       setEditor((prev) => ({ ...prev, category: event.target.value }))
                     }
-                    placeholder="Category"
+                    aria-label="Post category"
                     className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
-                  />
+                  >
+                    {BLOG_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
                   <label className="flex items-center gap-2 border border-ink/20 px-4 py-3 text-sm text-ink">
                     <input
                       type="checkbox"
@@ -611,28 +719,28 @@ export default function Blog() {
                     <button
                       type="button"
                       onClick={() => runCommand('bold')}
-                      className="border border-ink/20 px-2 py-1 text-xs"
+                      className="border border-ink/20 px-2 py-1 text-xs cursor-pointer"
                     >
                       Bold
                     </button>
                     <button
                       type="button"
                       onClick={() => runCommand('italic')}
-                      className="border border-ink/20 px-2 py-1 text-xs"
+                      className="border border-ink/20 px-2 py-1 text-xs cursor-pointer"
                     >
                       Italic
                     </button>
                     <button
                       type="button"
-                      onClick={() => runCommand('insertUnorderedList')}
-                      className="border border-ink/20 px-2 py-1 text-xs"
+                      onClick={() => insertList('ul')}
+                      className="border border-ink/20 px-2 py-1 text-xs cursor-pointer"
                     >
                       Bullet List
                     </button>
                     <button
                       type="button"
-                      onClick={() => runCommand('insertOrderedList')}
-                      className="border border-ink/20 px-2 py-1 text-xs"
+                      onClick={() => insertList('ol')}
+                      className="border border-ink/20 px-2 py-1 text-xs cursor-pointer"
                     >
                       Numbered List
                     </button>
@@ -644,12 +752,15 @@ export default function Blog() {
                     onInput={(event) =>
                       (() => {
                         isUserEditingRef.current = true;
+                        saveEditorSelection();
                         setEditor((prev) => ({
                           ...prev,
                           content: (event.target as HTMLDivElement).innerHTML,
                         }));
                       })()
                     }
+                    onKeyUp={saveEditorSelection}
+                    onMouseUp={saveEditorSelection}
                     suppressContentEditableWarning
                   />
                 </div>
@@ -680,6 +791,9 @@ export default function Blog() {
 
           {loading && <p className="text-sm text-ink-muted">Loading posts…</p>}
           {blogError && <p className="text-sm text-red-600 mb-4">{blogError}</p>}
+          {!loading && !blogError && posts.length === 0 && (
+            <p className="text-sm text-ink-muted mb-4">No posts yet.</p>
+          )}
 
           <div className="border-t border-ink/10 divide-y divide-ink/10">
             {posts.map((post, idx) => (
