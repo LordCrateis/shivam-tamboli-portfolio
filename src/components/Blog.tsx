@@ -58,8 +58,8 @@ export default function Blog() {
       </FadeUp>
 
       <div className="border-t border-ink/10 divide-y divide-ink/10">
-        {POSTS.map((post, i) => (
-          <FadeUp key={post.index} delay={0.16 + i * 0.07}>
+        {POSTS.map((post) => (
+          <FadeUp key={post.index} delay={0.16 + Number(post.index) * 0.07}>
             <article className="py-8">
               <div className="flex flex-col lg:flex-row lg:items-start gap-5 lg:gap-8">
                 <p className="terminal-text text-xs text-ink-muted shrink-0 w-8 mt-1">{post.index}</p>
