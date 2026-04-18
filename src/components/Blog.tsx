@@ -4,7 +4,7 @@ import { ArrowUpRight, ChevronDown, LogOut, Pencil, Plus, Trash2 } from 'lucide-
 import FadeUp from './FadeUp';
 import { supabase } from '../lib/supabase';
 
-type BlogMode = 'visitor' | 'shivam';
+type BlogMode = 'visitor' | 'team';
 
 type RouteState =
   | { kind: 'gateway' }
