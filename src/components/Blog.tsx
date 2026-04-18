@@ -35,6 +35,7 @@ interface EditorState {
 
 const SHIVAM_EDITOR_EMAIL = 'shivamrtamboli62@gmail.com';
 const BLOG_CATEGORIES = ['General', 'Engineering', 'Machine Learning', 'Career', 'Life'] as const;
+const PG_UNDEFINED_TABLE_ERROR_CODE = '42P01';
 
 const EMPTY_EDITOR: EditorState = {
   id: null,
@@ -244,7 +245,8 @@ export default function Blog() {
   };
 
   const isMissingBlogsTableError = (error: { code?: string; message?: string } | null) =>
-    error?.code === '42P01' || /relation ["']?public\.blogs["']? does not exist/i.test(error?.message ?? '');
+    error?.code === PG_UNDEFINED_TABLE_ERROR_CODE ||
+    /relation ["']?public\.blogs["']? does not exist/i.test(error?.message ?? '');
 
   useEffect(() => {
     const onHashChange = () => setHashValue(window.location.hash || '#/blog');
@@ -513,9 +515,9 @@ export default function Blog() {
       .map((line) => line.trim())
       .filter(Boolean);
     const list = document.createElement(listType);
-    const lines = selectedLines.length > 0 ? selectedLines : ['List item'];
+    const listItems = selectedLines.length > 0 ? selectedLines : ['List item'];
 
-    for (const line of lines) {
+    for (const line of listItems) {
       const item = document.createElement('li');
       item.textContent = line;
       list.appendChild(item);
