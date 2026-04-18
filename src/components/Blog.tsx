@@ -257,14 +257,13 @@ export default function Blog() {
           .from('blogs')
           .select('id,title,slug,excerpt,content,category,published,created_at,updated_at')
           .eq('slug', route.slug)
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
 
         if (!isShivamSession) {
           query = query.eq('published', true);
         }
 
-        const { data, error } = await query;
+        const { data, error } = await query.maybeSingle();
         if (error) {
           setBlogError(error.message);
           setActivePost(null);
