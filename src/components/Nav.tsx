@@ -5,12 +5,18 @@ const NAV_LINKS = [
   { label: 'Work', href: '#work' },
   { label: 'Stack', href: '#stack' },
   { label: 'Contact', href: '#contact' },
+  { label: 'Blog', href: '#/blog' },
 ];
 
-export default function Nav() {
+interface NavProps {
+  isBlogPage?: boolean;
+}
+
+export default function Nav({ isBlogPage = false }: NavProps) {
   const { scrollY } = useScroll();
   const borderOpacity = useTransform(scrollY, [0, 80], [0, 0.12]);
   const borderColor = useTransform(borderOpacity, (v) => `rgba(17,17,17,${v})`);
+  const links = isBlogPage ? [{ label: 'Home', href: '#' }, { label: 'Contact', href: 'mailto:shivamrtamboli62@gmail.com' }] : NAV_LINKS;
 
   return (
     <motion.nav
@@ -28,7 +34,7 @@ export default function Nav() {
       </motion.a>
 
       <div className="hidden md:flex items-center gap-8">
-        {NAV_LINKS.map((link) => (
+        {links.map((link) => (
           <a
             key={link.label}
             href={link.href}

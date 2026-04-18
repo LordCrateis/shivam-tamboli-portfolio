@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Preloader from './components/Preloader';
 import Cursor from './components/Cursor';
@@ -9,9 +9,24 @@ import About from './components/About';
 import Projects from './components/Projects';
 import Stack from './components/Stack';
 import Contact from './components/Contact';
+import Blog from './components/Blog';
+
+function getCurrentPage() {
+  return window.location.hash.startsWith('#/blog') ? 'blog' : 'home';
+}
 
 export default function App() {
   const [loaded, setLoaded] = useState(false);
+  const [page, setPage] = useState(getCurrentPage);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      setPage(getCurrentPage());
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   return (
     <>
@@ -27,13 +42,19 @@ export default function App() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            <Nav />
+            <Nav isBlogPage={page === 'blog'} />
             <main className="bg-cream min-h-screen">
-              <Hero />
-              <About />
-              <Projects />
-              <Stack />
-              <Contact />
+              {page === 'blog' ? (
+                <Blog />
+              ) : (
+                <>
+                  <Hero />
+                  <About />
+                  <Projects />
+                  <Stack />
+                  <Contact />
+                </>
+              )}
             </main>
           </motion.div>
         )}
