@@ -123,7 +123,7 @@ function sanitizeRichHtml(input: string): string {
     'a',
   ]);
 
-  const cleanNode = (node: Element) => {
+  const sanitizeNodeRecursively = (node: Element) => {
     for (const child of Array.from(node.children)) {
       const tagName = child.tagName.toLowerCase();
 
@@ -138,11 +138,20 @@ function sanitizeRichHtml(input: string): string {
         if (tagName === 'a' && ['href', 'target', 'rel'].includes(attrName)) {
           if (attrName === 'href') {
             const hrefValue = attr.value.trim();
-            const safeHref =
-              hrefValue.startsWith('https://') ||
-              hrefValue.startsWith('http://') ||
-              hrefValue.startsWith('mailto:') ||
-              hrefValue.startsWith('/');
+            const hasProtocolRelativePrefix = /^[/\\]{2}/.test(hrefValue);
+            const isRelativePath = hrefValue.startsWith('/') || hrefValue.startsWith('#');
+
+            let safeHref = false;
+            if (isRelativePath) {
+              safeHref = !hasProtocolRelativePrefix;
+            } else {
+              try {
+                const parsed = new URL(hrefValue);
+                safeHref = ['http:', 'https:', 'mailto:'].includes(parsed.protocol);
+              } catch {
+                safeHref = false;
+              }
+            }
 
             if (!safeHref) {
               child.removeAttribute(attr.name);
@@ -159,17 +168,18 @@ function sanitizeRichHtml(input: string): string {
         child.setAttribute('target', '_blank');
       }
 
-      cleanNode(child);
+      sanitizeNodeRecursively(child);
     }
   };
 
-  cleanNode(wrapper);
+  sanitizeNodeRecursively(wrapper);
   return wrapper.innerHTML;
 }
 
 export default function Blog() {
   const currentYear = new Date().getFullYear();
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const isUserEditingRef = useRef(false);
 
   const [hashValue, setHashValue] = useState(window.location.hash || '#/blog');
   const route = useMemo(() => parseRoute(hashValue), [hashValue]);
@@ -184,6 +194,7 @@ export default function Blog() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [blogError, setBlogError] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   const isShivamSession = session?.user?.email === SHIVAM_EDITOR_EMAIL;
 
@@ -217,6 +228,11 @@ export default function Blog() {
   }, []);
 
   useEffect(() => {
+    if (isUserEditingRef.current) {
+      isUserEditingRef.current = false;
+      return;
+    }
+
     if (contentRef.current && contentRef.current.innerHTML !== editor.content) {
       contentRef.current.innerHTML = editor.content;
     }
@@ -347,7 +363,6 @@ export default function Blog() {
       content: sanitizedContent,
       category: editor.category.trim() || 'General',
       published: editor.published,
-      updated_at: new Date().toISOString(),
     };
 
     if (editor.id) {
@@ -382,17 +397,13 @@ export default function Blog() {
   };
 
   const handleDelete = async (id: number) => {
-    const confirmed = window.confirm('Delete this blog post? This cannot be undone.');
-    if (!confirmed) {
-      return;
-    }
-
     const { error } = await supabase.from('blogs').delete().eq('id', id);
     if (error) {
       setBlogError(error.message);
       return;
     }
 
+    setPendingDeleteId(null);
     setPosts((prev) => prev.filter((post) => post.id !== id));
     if (editor.id === id) {
       setEditor(EMPTY_EDITOR);
@@ -402,7 +413,7 @@ export default function Blog() {
   const handlePublishToggle = async (post: BlogPost) => {
     const { error } = await supabase
       .from('blogs')
-      .update({ published: !post.published, updated_at: new Date().toISOString() })
+      .update({ published: !post.published })
       .eq('id', post.id);
 
     if (error) {
@@ -631,10 +642,13 @@ export default function Blog() {
                     contentEditable
                     className="min-h-52 p-4 outline-none text-sm leading-relaxed"
                     onInput={(event) =>
-                      setEditor((prev) => ({
-                        ...prev,
-                        content: (event.target as HTMLDivElement).innerHTML,
-                      }))
+                      (() => {
+                        isUserEditingRef.current = true;
+                        setEditor((prev) => ({
+                          ...prev,
+                          content: (event.target as HTMLDivElement).innerHTML,
+                        }));
+                      })()
                     }
                     suppressContentEditableWarning
                   />
@@ -724,7 +738,7 @@ export default function Blog() {
                             {post.published ? 'Mark Draft' : 'Publish'}
                           </button>
                           <button
-                            onClick={() => handleDelete(post.id)}
+                            onClick={() => setPendingDeleteId(post.id)}
                             className="inline-flex items-center gap-1 border border-red-300 text-red-600 px-3 py-1.5 text-xs uppercase tracking-wide"
                             data-cursor="pointer"
                           >
@@ -733,6 +747,29 @@ export default function Blog() {
                           </button>
                         </div>
                       )}
+                      {route.mode === 'shivam' &&
+                        isShivamSession &&
+                        pendingDeleteId === post.id && (
+                          <div className="mt-3 flex flex-wrap items-center gap-2 border border-red-200 bg-red-50/40 px-3 py-2">
+                            <p className="text-xs text-red-700">
+                              Delete this post permanently?
+                            </p>
+                            <button
+                              onClick={() => handleDelete(post.id)}
+                              className="border border-red-300 text-red-700 px-2 py-1 text-xs uppercase tracking-wide"
+                              data-cursor="pointer"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => setPendingDeleteId(null)}
+                              className="border border-ink/20 text-ink px-2 py-1 text-xs uppercase tracking-wide"
+                              data-cursor="pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
                     </div>
 
                     <ArrowUpRight size={18} className="text-ink-muted lg:mt-1 shrink-0" />
