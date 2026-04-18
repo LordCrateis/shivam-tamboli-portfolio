@@ -434,7 +434,7 @@ export default function Blog() {
       .select('id,title,slug,excerpt,content,category,published,created_at,updated_at')
       .order('created_at', { ascending: false });
 
-  if (error) {
+    if (error) {
       setBlogError(isMissingBlogsTableError(error) ? null : 'Unable to refresh posts right now.');
     } else {
       setPosts(data ?? []);
@@ -464,7 +464,7 @@ export default function Blog() {
       .update({ published: !post.published })
       .eq('id', post.id);
 
-  if (error) {
+    if (error) {
       setBlogError('Unable to update publish status right now.');
       return;
     }
