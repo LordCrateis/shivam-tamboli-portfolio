@@ -46,6 +46,14 @@ const EMPTY_EDITOR: EditorState = {
   published: false,
 };
 
+function normalizeCategory(category: string | null | undefined): string {
+  if (!category) {
+    return 'General';
+  }
+
+  return BLOG_CATEGORIES.includes(category as (typeof BLOG_CATEGORIES)[number]) ? category : 'General';
+}
+
 function parseRoute(hashValue: string): RouteState {
   const cleaned = hashValue.replace(/^#\/?/, '');
   const [root, second, ...rest] = cleaned.split('/');
@@ -353,7 +361,7 @@ export default function Blog() {
       slug: post.slug,
       excerpt: post.excerpt,
       content: post.content,
-      category: post.category,
+      category: normalizeCategory(post.category),
       published: post.published,
     });
   };
@@ -674,6 +682,7 @@ export default function Blog() {
                     onChange={(event) =>
                       setEditor((prev) => ({ ...prev, category: event.target.value }))
                     }
+                    aria-label="Post category"
                     className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
                   >
                     {BLOG_CATEGORIES.map((category) => (
