@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
 import FadeUp from './FadeUp';
@@ -76,7 +76,7 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
     ? editor.category
     : CUSTOM_CATEGORY_VALUE;
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -99,11 +99,11 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
     }
 
     setLoading(false);
-  };
+  }, [isAdminSession]);
 
   useEffect(() => {
     void fetchProjects();
-  }, [isAdminSession]);
+  }, [fetchProjects]);
 
   const handleEdit = (project: ProjectRecord) => {
     setEditor({
