@@ -1,14 +1,13 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import type { Session } from '@supabase/supabase-js';
 import { ArrowUpRight, ChevronDown, LogOut, Pencil, Plus, Trash2 } from 'lucide-react';
 import FadeUp from './FadeUp';
 import { supabase } from '../lib/supabase';
 
-type BlogMode = 'visitor' | 'shivam';
+type BlogMode = 'auto' | 'visitor' | 'team';
 
 type RouteState =
-  | { kind: 'gateway' }
   | { kind: 'list'; mode: BlogMode }
+  | { kind: 'roles' }
   | { kind: 'detail'; slug: string };
 
 interface BlogPost {
@@ -19,6 +18,7 @@ interface BlogPost {
   content: string;
   category: string;
   published: boolean;
+  published_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -31,10 +31,11 @@ interface EditorState {
   content: string;
   category: string;
   published: boolean;
+  publishedAt: string;
 }
 
-const SHIVAM_EDITOR_EMAIL = 'shivamrtamboli62@gmail.com';
-const BLOG_CATEGORIES = ['General', 'Engineering', 'Machine Learning', 'Career', 'Life'] as const;
+const DEFAULT_BLOG_CATEGORIES = ['General', 'Engineering', 'Machine Learning', 'Career', 'Life'];
+const CUSTOM_CATEGORY_VALUE = '__custom__';
 const PG_UNDEFINED_TABLE_ERROR_CODE = '42P01';
 
 const EMPTY_EDITOR: EditorState = {
@@ -45,14 +46,11 @@ const EMPTY_EDITOR: EditorState = {
   content: '<p></p>',
   category: 'General',
   published: false,
+  publishedAt: '',
 };
 
 function normalizeCategory(category: string | null | undefined): string {
-  if (!category) {
-    return 'General';
-  }
-
-  return BLOG_CATEGORIES.includes(category as (typeof BLOG_CATEGORIES)[number]) ? category : 'General';
+  return category?.trim() || 'General';
 }
 
 function parseRoute(hashValue: string): RouteState {
@@ -60,24 +58,28 @@ function parseRoute(hashValue: string): RouteState {
   const [root, second, ...rest] = cleaned.split('/');
 
   if (root !== 'blog') {
-    return { kind: 'gateway' };
+    return { kind: 'list', mode: 'auto' };
   }
 
   if (!second) {
-    return { kind: 'gateway' };
+    return { kind: 'list', mode: 'auto' };
+  }
+
+  if (second === 'roles') {
+    return { kind: 'roles' };
   }
 
   if (second === 'visitor') {
     return { kind: 'list', mode: 'visitor' };
   }
 
-  if (second === 'shivam') {
-    return { kind: 'list', mode: 'shivam' };
+  if (second === 'team') {
+    return { kind: 'list', mode: 'team' };
   }
 
   const slug = [second, ...rest].join('/').trim();
   if (!slug) {
-    return { kind: 'gateway' };
+    return { kind: 'list', mode: 'auto' };
   }
 
   return { kind: 'detail', slug: decodeURIComponent(slug) };
@@ -92,7 +94,11 @@ function slugify(value: string): string {
     .replace(/-+/g, '-');
 }
 
-function formatDate(date: string): string {
+function formatDate(date: string | null | undefined): string {
+  if (!date) {
+    return '';
+  }
+
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     year: 'numeric',
@@ -186,7 +192,11 @@ function sanitizeRichHtml(input: string): string {
   return wrapper.innerHTML;
 }
 
-export default function Blog() {
+interface BlogProps {
+  isAdminSession: boolean;
+}
+
+export default function Blog({ isAdminSession }: BlogProps) {
   const currentYear = new Date().getFullYear();
   const contentRef = useRef<HTMLDivElement | null>(null);
   const isUserEditingRef = useRef(false);
@@ -194,10 +204,14 @@ export default function Blog() {
 
   const [hashValue, setHashValue] = useState(window.location.hash || '#/blog');
   const route = useMemo(() => parseRoute(hashValue), [hashValue]);
-
-  const [session, setSession] = useState<Session | null>(null);
-  const [authPassword, setAuthPassword] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
+  const activeMode =
+    route.kind === 'list'
+      ? route.mode === 'auto'
+        ? isAdminSession
+          ? 'team'
+          : 'visitor'
+        : route.mode
+      : 'visitor';
 
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [activePost, setActivePost] = useState<BlogPost | null>(null);
@@ -206,12 +220,11 @@ export default function Blog() {
   const [saving, setSaving] = useState(false);
   const [blogError, setBlogError] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-
-  const isShivamSession = session?.user?.email === SHIVAM_EDITOR_EMAIL;
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(DEFAULT_BLOG_CATEGORIES);
 
   const saveEditorSelection = () => {
-    const editor = contentRef.current;
-    if (!editor) {
+    const editorElement = contentRef.current;
+    if (!editorElement) {
       selectionRef.current = null;
       return;
     }
@@ -224,7 +237,9 @@ export default function Blog() {
 
     const range = selection.getRangeAt(0);
     const common = range.commonAncestorContainer;
-    const insideEditor = editor.contains(common.nodeType === Node.ELEMENT_NODE ? common : common.parentNode);
+    const insideEditor = editorElement.contains(
+      common.nodeType === Node.ELEMENT_NODE ? common : common.parentNode,
+    );
 
     selectionRef.current = insideEditor ? range.cloneRange() : null;
   };
@@ -255,29 +270,6 @@ export default function Blog() {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const nextSession = data.session;
-      if (nextSession?.user?.email !== SHIVAM_EDITOR_EMAIL) {
-        setSession(null);
-        return;
-      }
-      setSession(nextSession);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (nextSession?.user?.email !== SHIVAM_EDITOR_EMAIL) {
-        setSession(null);
-        return;
-      }
-      setSession(nextSession);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
     if (isUserEditingRef.current) {
       isUserEditingRef.current = false;
       return;
@@ -289,29 +281,52 @@ export default function Blog() {
   }, [editor.content]);
 
   useEffect(() => {
+    const loadCategories = async () => {
+      if (!isAdminSession) {
+        return;
+      }
+
+      const { data, error } = await supabase.from('blogs').select('category');
+      if (error || !data) {
+        return;
+      }
+
+      const next = new Set(DEFAULT_BLOG_CATEGORIES);
+      data.forEach((row) => {
+        const category = normalizeCategory(row.category as string | null | undefined);
+        if (category) {
+          next.add(category);
+        }
+      });
+      setCategoryOptions(Array.from(next));
+    };
+
+    void loadCategories();
+  }, [isAdminSession]);
+
+  useEffect(() => {
     const load = async () => {
       setBlogError(null);
       setLoading(true);
 
-      if (route.kind === 'list') {
-        if (route.mode === 'shivam' && !isShivamSession) {
-          setPosts([]);
-          setLoading(false);
-          return;
-        }
+      if (route.kind === 'roles') {
+        setLoading(false);
+        return;
+      }
 
+      if (route.kind === 'list') {
         let query = supabase
           .from('blogs')
-          .select('id,title,slug,excerpt,content,category,published,created_at,updated_at')
+          .select('id,title,slug,excerpt,content,category,published,published_at,created_at,updated_at')
           .order('created_at', { ascending: false });
 
-        if (route.mode === 'visitor') {
+        if (activeMode === 'visitor') {
           query = query.eq('published', true);
         }
 
         const { data, error } = await query;
         if (error) {
-          if (route.mode === 'visitor' || isMissingBlogsTableError(error)) {
+          if (activeMode === 'visitor' || isMissingBlogsTableError(error)) {
             setBlogError(null);
           } else {
             setBlogError('Unable to load posts right now.');
@@ -325,17 +340,17 @@ export default function Blog() {
       if (route.kind === 'detail') {
         let query = supabase
           .from('blogs')
-          .select('id,title,slug,excerpt,content,category,published,created_at,updated_at')
+          .select('id,title,slug,excerpt,content,category,published,published_at,created_at,updated_at')
           .eq('slug', route.slug)
           .limit(1);
 
-        if (!isShivamSession) {
+        if (!isAdminSession) {
           query = query.eq('published', true);
         }
 
         const { data, error } = await query.maybeSingle();
         if (error) {
-          if (!isShivamSession || isMissingBlogsTableError(error)) {
+          if (!isAdminSession || isMissingBlogsTableError(error)) {
             setBlogError(null);
           } else {
             setBlogError('Unable to load this post right now.');
@@ -350,7 +365,7 @@ export default function Blog() {
     };
 
     void load();
-  }, [route, isShivamSession]);
+  }, [route, activeMode, isAdminSession]);
 
   const openNewEditor = () => {
     setEditor(EMPTY_EDITOR);
@@ -365,32 +380,8 @@ export default function Blog() {
       content: post.content,
       category: normalizeCategory(post.category),
       published: post.published,
+      publishedAt: post.published_at ? post.published_at.slice(0, 10) : '',
     });
-  };
-
-  const handleLogin = async (event: FormEvent) => {
-    event.preventDefault();
-    setAuthError(null);
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: SHIVAM_EDITOR_EMAIL,
-      password: authPassword,
-    });
-
-    if (error) {
-      setAuthError(error.message);
-      return;
-    }
-
-    if (data.user?.email !== SHIVAM_EDITOR_EMAIL) {
-      await supabase.auth.signOut();
-      setAuthError('Only the Shivam editor account can access edit mode.');
-      return;
-    }
-
-    setAuthPassword('');
-    setHashValue('#/blog/shivam');
-    window.location.hash = '/blog/shivam';
   };
 
   const handleLogout = async () => {
@@ -419,8 +410,9 @@ export default function Blog() {
       slug,
       excerpt: editor.excerpt.trim(),
       content: sanitizedContent,
-      category: editor.category.trim() || 'General',
+      category: normalizeCategory(editor.category),
       published: editor.published,
+      published_at: editor.publishedAt || null,
     };
 
     if (editor.id) {
@@ -441,7 +433,7 @@ export default function Blog() {
 
     const { data, error } = await supabase
       .from('blogs')
-      .select('id,title,slug,excerpt,content,category,published,created_at,updated_at')
+      .select('id,title,slug,excerpt,content,category,published,published_at,created_at,updated_at')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -449,6 +441,10 @@ export default function Blog() {
     } else {
       setPosts(data ?? []);
       setEditor(EMPTY_EDITOR);
+      const categoryFromEditor = normalizeCategory(editor.category);
+      if (!categoryOptions.includes(categoryFromEditor)) {
+        setCategoryOptions((prev) => [...prev, categoryFromEditor]);
+      }
     }
 
     setSaving(false);
@@ -480,9 +476,7 @@ export default function Blog() {
     }
 
     setPosts((prev) =>
-      prev.map((item) =>
-        item.id === post.id ? { ...item, published: !item.published } : item,
-      ),
+      prev.map((item) => (item.id === post.id ? { ...item, published: !item.published } : item)),
     );
   };
 
@@ -497,6 +491,10 @@ export default function Blog() {
   const insertList = (listType: 'ul' | 'ol') => {
     runCommand(listType === 'ul' ? 'insertUnorderedList' : 'insertOrderedList');
   };
+
+  const selectedCategoryValue = categoryOptions.includes(editor.category)
+    ? editor.category
+    : CUSTOM_CATEGORY_VALUE;
 
   return (
     <section className="pt-28 pb-20 px-6 md:px-12 lg:px-16 min-h-screen">
@@ -521,9 +519,9 @@ export default function Blog() {
         </p>
       </FadeUp>
 
-      {route.kind === 'gateway' && (
+      {route.kind === 'roles' && isAdminSession && (
         <FadeUp delay={0.2}>
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl">
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mb-12">
             <button
               onClick={() => {
                 window.location.hash = '/blog/visitor';
@@ -534,13 +532,13 @@ export default function Blog() {
               <p className="terminal-text text-xs text-ink-muted uppercase mb-3">Read only</p>
               <h2 className="font-serif text-3xl text-ink mb-3">Visitor</h2>
               <p className="font-sans text-sm text-ink-muted leading-relaxed">
-                Browse published posts only. No editing controls are shown.
+                Preview the same published-only listing public users see.
               </p>
             </button>
 
             <button
               onClick={() => {
-                window.location.hash = '/blog/shivam';
+                window.location.hash = '/blog/team';
               }}
               className="text-left border border-ink/15 p-6 hover:border-ink/40 transition-colors"
               data-cursor="pointer"
@@ -548,48 +546,20 @@ export default function Blog() {
               <p className="terminal-text text-xs text-ink-muted uppercase mb-3">Editor access</p>
               <h2 className="font-serif text-3xl text-ink mb-3">Team</h2>
               <p className="font-sans text-sm text-ink-muted leading-relaxed">
-                Login first, then add, edit, delete, and publish or draft blogs.
+                Open the full listing with add, edit, delete, and publish controls.
               </p>
             </button>
           </div>
         </FadeUp>
       )}
 
-      {route.kind === 'list' && route.mode === 'shivam' && !isShivamSession && (
-        <FadeUp delay={0.2}>
-          <form onSubmit={handleLogin} className="max-w-md border border-ink/15 p-6 space-y-4">
-            <p className="terminal-text text-xs text-ink-muted uppercase">Shivam editor login</p>
-            <h2 className="font-serif text-3xl text-ink">Enter password</h2>
-            <p className="font-sans text-sm text-ink-muted">
-              Continue as {SHIVAM_EDITOR_EMAIL} to unlock editor controls.
-            </p>
-            <input
-              type="password"
-              value={authPassword}
-              onChange={(event) => setAuthPassword(event.target.value)}
-              className="w-full border border-ink/20 bg-transparent px-4 py-3 text-sm text-ink outline-none"
-              placeholder="Password"
-              required
-            />
-            {authError && <p className="text-sm text-red-600">{authError}</p>}
-            <button
-              type="submit"
-              className="bg-ink text-cream px-4 py-2 text-xs uppercase tracking-wide"
-              data-cursor="pointer"
-            >
-              Login
-            </button>
-          </form>
-        </FadeUp>
-      )}
-
-      {route.kind === 'list' && (route.mode === 'visitor' || isShivamSession) && (
+      {route.kind === 'list' && (
         <>
-          {route.mode === 'shivam' && isShivamSession && (
+          {isAdminSession && activeMode === 'team' && (
             <FadeUp delay={0.2}>
               <div className="flex flex-wrap items-center justify-between gap-4 mb-8 border border-ink/15 p-4">
                 <p className="terminal-text text-xs text-ink-muted uppercase">
-                  Shivam mode active — full editor access
+                  Admin mode active — full editor access
                 </p>
                 <div className="flex items-center gap-3">
                   <button
@@ -599,6 +569,15 @@ export default function Blog() {
                   >
                     <Plus size={14} />
                     New Post
+                  </button>
+                  <button
+                    onClick={() => {
+                      window.location.hash = '/blog/roles';
+                    }}
+                    className="border border-ink/20 px-3 py-2 text-xs uppercase tracking-wide text-ink"
+                    data-cursor="pointer"
+                  >
+                    Modes
                   </button>
                   <button
                     onClick={handleLogout}
@@ -613,7 +592,7 @@ export default function Blog() {
             </FadeUp>
           )}
 
-          {route.mode === 'shivam' && isShivamSession && (
+          {isAdminSession && activeMode === 'team' && (
             <FadeUp delay={0.22}>
               <form onSubmit={handleSave} className="border border-ink/15 p-6 mb-12 space-y-4">
                 <h3 className="font-serif text-2xl text-ink">
@@ -623,18 +602,14 @@ export default function Blog() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <input
                     value={editor.title}
-                    onChange={(event) =>
-                      setEditor((prev) => ({ ...prev, title: event.target.value }))
-                    }
+                    onChange={(event) => setEditor((prev) => ({ ...prev, title: event.target.value }))}
                     placeholder="Title"
                     className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
                     required
                   />
                   <input
                     value={editor.slug}
-                    onChange={(event) =>
-                      setEditor((prev) => ({ ...prev, slug: event.target.value }))
-                    }
+                    onChange={(event) => setEditor((prev) => ({ ...prev, slug: event.target.value }))}
                     placeholder="Slug (optional, auto-generated from title)"
                     className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
                   />
@@ -643,41 +618,67 @@ export default function Blog() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="relative">
                     <select
-                      value={editor.category}
-                      onChange={(event) =>
-                        setEditor((prev) => ({ ...prev, category: event.target.value }))
-                      }
+                      value={selectedCategoryValue}
+                      onChange={(event) => {
+                        if (event.target.value === CUSTOM_CATEGORY_VALUE) {
+                          setEditor((prev) => ({
+                            ...prev,
+                            category: categoryOptions.includes(prev.category) ? '' : prev.category,
+                          }));
+                          return;
+                        }
+
+                        setEditor((prev) => ({ ...prev, category: event.target.value }));
+                      }}
                       aria-label="Post category"
                       className="blog-category-select"
                     >
-                      {BLOG_CATEGORIES.map((category) => (
+                      {categoryOptions.map((category) => (
                         <option key={category} value={category}>
                           {category}
                         </option>
                       ))}
+                      <option value={CUSTOM_CATEGORY_VALUE}>Custom...</option>
                     </select>
                     <ChevronDown
                       size={14}
                       className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted"
                     />
                   </div>
+
                   <label className="flex items-center gap-2 border border-ink/20 px-4 py-3 text-sm text-ink">
                     <input
                       type="checkbox"
                       checked={editor.published}
-                      onChange={(event) =>
-                        setEditor((prev) => ({ ...prev, published: event.target.checked }))
-                      }
+                      onChange={(event) => setEditor((prev) => ({ ...prev, published: event.target.checked }))}
                     />
                     Published
                   </label>
                 </div>
 
+                {selectedCategoryValue === CUSTOM_CATEGORY_VALUE && (
+                  <input
+                    value={editor.category}
+                    onChange={(event) => setEditor((prev) => ({ ...prev, category: event.target.value }))}
+                    placeholder="Custom category"
+                    className="w-full border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
+                    required
+                  />
+                )}
+
+                <div className="space-y-2">
+                  <label className="terminal-text text-xs text-ink-muted uppercase">Published date</label>
+                  <input
+                    type="date"
+                    value={editor.publishedAt}
+                    onChange={(event) => setEditor((prev) => ({ ...prev, publishedAt: event.target.value }))}
+                    className="w-full border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
+                  />
+                </div>
+
                 <textarea
                   value={editor.excerpt}
-                  onChange={(event) =>
-                    setEditor((prev) => ({ ...prev, excerpt: event.target.value }))
-                  }
+                  onChange={(event) => setEditor((prev) => ({ ...prev, excerpt: event.target.value }))}
                   placeholder="Excerpt"
                   className="w-full border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none min-h-24"
                 />
@@ -759,9 +760,7 @@ export default function Blog() {
 
           {loading && <p className="text-sm text-ink-muted">Loading posts…</p>}
           {blogError && <p className="text-sm text-red-600 mb-4">{blogError}</p>}
-          {!loading && !blogError && posts.length === 0 && (
-            <p className="text-sm text-ink-muted mb-4">No posts yet.</p>
-          )}
+          {!loading && !blogError && posts.length === 0 && <p className="text-sm text-ink-muted mb-4">No posts yet.</p>}
 
           <div className="border-t border-ink/10 divide-y divide-ink/10">
             {posts.map((post, idx) => (
@@ -775,13 +774,11 @@ export default function Blog() {
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3">
                         <span className="terminal-text text-xs text-ink-muted">
-                          {formatDate(post.created_at)}
+                          {formatDate(post.published_at || post.created_at)}
                         </span>
-                        <span className="terminal-text text-xs text-ink-muted">
-                          {getReadTime(post.content)}
-                        </span>
+                        <span className="terminal-text text-xs text-ink-muted">{getReadTime(post.content)}</span>
                         <span className="terminal-text text-xs border border-ink/20 px-2 py-0.5 text-ink-muted">
-                          {post.category || 'General'}
+                          {normalizeCategory(post.category)}
                         </span>
                         {!post.published && (
                           <span className="terminal-text text-xs border border-ink/20 px-2 py-0.5 text-ink-muted">
@@ -802,7 +799,7 @@ export default function Blog() {
                         {post.excerpt || 'No excerpt provided.'}
                       </p>
 
-                      {route.mode === 'shivam' && isShivamSession && (
+                      {isAdminSession && activeMode === 'team' && (
                         <div className="mt-4 flex flex-wrap items-center gap-2">
                           <button
                             onClick={() => openEditorForPost(post)}
@@ -829,29 +826,25 @@ export default function Blog() {
                           </button>
                         </div>
                       )}
-                      {route.mode === 'shivam' &&
-                        isShivamSession &&
-                        pendingDeleteId === post.id && (
-                          <div className="mt-3 flex flex-wrap items-center gap-2 border border-red-200 bg-red-50/40 px-3 py-2">
-                            <p className="text-xs text-red-700">
-                              Delete this post permanently?
-                            </p>
-                            <button
-                              onClick={() => handleDelete(post.id)}
-                              className="border border-red-300 text-red-700 px-2 py-1 text-xs uppercase tracking-wide"
-                              data-cursor="pointer"
-                            >
-                              Confirm
-                            </button>
-                            <button
-                              onClick={() => setPendingDeleteId(null)}
-                              className="border border-ink/20 text-ink px-2 py-1 text-xs uppercase tracking-wide"
-                              data-cursor="pointer"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        )}
+                      {isAdminSession && activeMode === 'team' && pendingDeleteId === post.id && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 border border-red-200 bg-red-50/40 px-3 py-2">
+                          <p className="text-xs text-red-700">Delete this post permanently?</p>
+                          <button
+                            onClick={() => handleDelete(post.id)}
+                            className="border border-red-300 text-red-700 px-2 py-1 text-xs uppercase tracking-wide"
+                            data-cursor="pointer"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => setPendingDeleteId(null)}
+                            className="border border-ink/20 text-ink px-2 py-1 text-xs uppercase tracking-wide"
+                            data-cursor="pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <ArrowUpRight size={18} className="text-ink-muted lg:mt-1 shrink-0" />
@@ -863,25 +856,35 @@ export default function Blog() {
         </>
       )}
 
+      {route.kind === 'roles' && !isAdminSession && (
+        <FadeUp delay={0.2}>
+          <div className="border-t border-ink/10 pt-6">
+            <a
+              href="#/blog"
+              className="terminal-text text-xs text-ink-muted hover:text-ink uppercase"
+              data-cursor="pointer"
+            >
+              ← Back to blog list
+            </a>
+          </div>
+        </FadeUp>
+      )}
+
       {route.kind === 'detail' && (
         <FadeUp delay={0.2}>
           {loading && <p className="text-sm text-ink-muted">Loading post…</p>}
           {blogError && <p className="text-sm text-red-600">{blogError}</p>}
 
-          {!loading && !activePost && !blogError && (
-            <p className="text-sm text-ink-muted">This post is unavailable.</p>
-          )}
+          {!loading && !activePost && !blogError && <p className="text-sm text-ink-muted">This post is unavailable.</p>}
 
           {activePost && (
             <article className="max-w-4xl">
               <p className="terminal-text text-xs text-ink-muted uppercase mb-4">
-                {activePost.category || 'General'}
+                {normalizeCategory(activePost.category)}
               </p>
-              <h2 className="font-serif text-4xl md:text-6xl text-ink leading-tight mb-4">
-                {activePost.title}
-              </h2>
+              <h2 className="font-serif text-4xl md:text-6xl text-ink leading-tight mb-4">{activePost.title}</h2>
               <p className="terminal-text text-xs text-ink-muted mb-10">
-                {formatDate(activePost.created_at)} · {getReadTime(activePost.content)}
+                {formatDate(activePost.published_at || activePost.created_at)} · {getReadTime(activePost.content)}
               </p>
 
               <div
@@ -893,7 +896,7 @@ export default function Blog() {
 
               <div className="mt-12">
                 <a
-                  href="#/blog/visitor"
+                  href="#/blog"
                   className="terminal-text text-xs text-ink-muted hover:text-ink uppercase"
                   data-cursor="pointer"
                 >
