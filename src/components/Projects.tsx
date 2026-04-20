@@ -46,6 +46,7 @@ const EMPTY_EDITOR: ProjectEditorState = {
   liveUrl: '',
   status: 'In Progress',
 };
+const SEARCH_ICON_URL = 'https://cdn.jsdelivr.net/npm/lucide-static@0.468.0/icons/search.svg';
 
 function normalizeCategory(category: string | null | undefined): string {
   return category?.trim() || DEFAULT_PROJECT_CATEGORY;
@@ -57,6 +58,7 @@ interface ProjectsProps {
 
 export default function Projects({ isAdminSession }: ProjectsProps) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +77,27 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
   const selectedCategoryValue = categoryOptions.includes(editor.category)
     ? editor.category
     : CUSTOM_CATEGORY_VALUE;
+  const normalizedProjectSearch = searchQuery.trim().toLowerCase();
+  const filteredProjects = useMemo(() => {
+    if (!normalizedProjectSearch) {
+      return projects;
+    }
+
+    return projects.filter((project) => {
+      const searchable = [
+        project.title,
+        project.description ?? '',
+        normalizeCategory(project.category),
+        (project.tech_stack ?? []).join(' '),
+        project.status ?? '',
+        project.year ? String(project.year) : '',
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchable.includes(normalizedProjectSearch);
+    });
+  }, [projects, normalizedProjectSearch]);
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -215,6 +238,30 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
         <h2 className="font-serif text-ink leading-tight mb-16" style={{ fontSize: 'clamp(2rem, 4vw, 3.2rem)' }}>
           Selected Projects
         </h2>
+      </FadeUp>
+
+      <FadeUp delay={0.12}>
+        <div className="mb-10">
+          <label htmlFor="project-search" className="terminal-text text-xs text-ink-muted uppercase mb-2 block">
+            Search projects
+          </label>
+          <div className="relative max-w-xl">
+            <img
+              src={SEARCH_ICON_URL}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50"
+            />
+            <input
+              id="project-search"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search by title, category, stack, year, or status"
+              className="w-full border border-ink/20 bg-transparent py-3 pl-11 pr-4 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-ink/35 focus-visible:ring-offset-1 focus-visible:ring-offset-cream"
+            />
+          </div>
+        </div>
       </FadeUp>
 
       {isAdminSession && (
@@ -360,7 +407,7 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
       {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
 
       <div className="divide-y divide-ink/10 border-t border-ink/10">
-        {projects.map((project, i) => {
+        {filteredProjects.map((project, i) => {
           const techTags = project.tech_stack ?? [];
 
           return (
@@ -474,6 +521,11 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
           );
         })}
       </div>
+      {!loading && !error && filteredProjects.length === 0 && (
+        <p className="mt-4 text-sm text-ink-muted">
+          {normalizedProjectSearch ? 'No projects match this search.' : 'No projects available.'}
+        </p>
+      )}
     </section>
   );
 }

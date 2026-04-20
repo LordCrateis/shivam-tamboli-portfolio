@@ -37,6 +37,7 @@ interface EditorState {
 const DEFAULT_BLOG_CATEGORIES = ['General', 'Engineering', 'Machine Learning', 'Career', 'Life'];
 const CUSTOM_CATEGORY_VALUE = '__custom__';
 const PG_UNDEFINED_TABLE_ERROR_CODE = '42P01';
+const SEARCH_ICON_URL = 'https://cdn.jsdelivr.net/npm/lucide-static@0.468.0/icons/search.svg';
 
 const EMPTY_EDITOR: EditorState = {
   id: null,
@@ -221,6 +222,26 @@ export default function Blog({ isAdminSession }: BlogProps) {
   const [blogError, setBlogError] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<string[]>(DEFAULT_BLOG_CATEGORIES);
+  const [searchQuery, setSearchQuery] = useState('');
+  const normalizedBlogSearch = searchQuery.trim().toLowerCase();
+  const filteredPosts = useMemo(() => {
+    if (!normalizedBlogSearch) {
+      return posts;
+    }
+
+    return posts.filter((post) => {
+      const searchable = [
+        post.title,
+        post.excerpt,
+        normalizeCategory(post.category),
+        stripHtml(post.content),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchable.includes(normalizedBlogSearch);
+    });
+  }, [posts, normalizedBlogSearch]);
 
   const saveEditorSelection = () => {
     const editorElement = contentRef.current;
@@ -555,6 +576,30 @@ export default function Blog({ isAdminSession }: BlogProps) {
 
       {route.kind === 'list' && (
         <>
+          <FadeUp delay={0.18}>
+            <div className="mb-8">
+              <label htmlFor="blog-search" className="terminal-text text-xs text-ink-muted uppercase mb-2 block">
+                Search blogs
+              </label>
+              <div className="relative max-w-xl">
+                <img
+                  src={SEARCH_ICON_URL}
+                  alt=""
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50"
+                />
+                <input
+                  id="blog-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search by title, category, or keywords"
+                  className="w-full border border-ink/20 bg-transparent py-3 pl-11 pr-4 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-ink/35 focus-visible:ring-offset-1 focus-visible:ring-offset-cream"
+                />
+              </div>
+            </div>
+          </FadeUp>
+
           {isAdminSession && activeMode === 'team' && (
             <FadeUp delay={0.2}>
               <div className="flex flex-wrap items-center justify-between gap-4 mb-8 border border-ink/15 p-4">
@@ -760,10 +805,14 @@ export default function Blog({ isAdminSession }: BlogProps) {
 
           {loading && <p className="text-sm text-ink-muted">Loading posts…</p>}
           {blogError && <p className="text-sm text-red-600 mb-4">{blogError}</p>}
-          {!loading && !blogError && posts.length === 0 && <p className="text-sm text-ink-muted mb-4">No posts yet.</p>}
+          {!loading && !blogError && filteredPosts.length === 0 && (
+            <p className="text-sm text-ink-muted mb-4">
+              {normalizedBlogSearch ? 'No blog posts match this search.' : 'No posts yet.'}
+            </p>
+          )}
 
           <div className="border-t border-ink/10 divide-y divide-ink/10">
-            {posts.map((post, idx) => (
+            {filteredPosts.map((post, idx) => (
               <FadeUp key={post.id} delay={0.18 + idx * 0.04}>
                 <article className="py-8">
                   <div className="flex flex-col lg:flex-row lg:items-start gap-5 lg:gap-8">
