@@ -21,10 +21,10 @@ const ADMIN_OAUTH_REDIRECT_HASH = '/';
 const ADMIN_ROUTE = import.meta.env.VITE_ADMIN_ROUTE;
 
 function getCurrentPage(): AppPage {
+  console.log('hash:', window.location.hash, 'admin route:', `#/${ADMIN_ROUTE}`);
   if (window.location.hash.startsWith(`#/${ADMIN_ROUTE}`)) {
     return 'admin';
   }
-
   return window.location.hash.startsWith('#/blog') ? 'blog' : 'home';
 }
 
