@@ -15,7 +15,7 @@ import { supabase } from './lib/supabase';
 import { getAdminAvatarUrl, isAdminEmail } from './lib/admin';
 
 type AppPage = 'home' | 'blog' | 'admin';
-const ADMIN_OAUTH_REDIRECT_HASH = '/#/blog';
+const ADMIN_OAUTH_REDIRECT_HASH = '/';
 // 'admin' is an ephemeral OAuth trigger state for the secret route, not a rendered page.
 
 function getCurrentPage(): AppPage {
