@@ -17,9 +17,15 @@ const BLOG_NAV_LINKS = [
 
 interface NavProps {
   isBlogPage?: boolean;
+  isAdminSession?: boolean;
+  adminAvatarUrl?: string | null;
 }
 
-export default function Nav({ isBlogPage = false }: NavProps) {
+export default function Nav({
+  isBlogPage = false,
+  isAdminSession = false,
+  adminAvatarUrl = null,
+}: NavProps) {
   const { scrollY } = useScroll();
   const borderOpacity = useTransform(scrollY, [0, 80], [0, 0.12]);
   const borderColor = useTransform(borderOpacity, (v) => `rgba(17,17,17,${v})`);
@@ -91,7 +97,16 @@ export default function Nav({ isBlogPage = false }: NavProps) {
           whileHover={{ opacity: 0.6 }}
           transition={{ duration: 0.2 }}
         >
-          ST
+          {isAdminSession && adminAvatarUrl ? (
+            <img
+              src={adminAvatarUrl}
+              alt="Admin avatar"
+              className="h-7 w-7 rounded-full border border-ink/20 object-cover"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            'ST'
+          )}
         </motion.a>
 
         <div className="hidden md:flex items-center gap-8">
