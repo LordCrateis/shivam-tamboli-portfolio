@@ -101,7 +101,7 @@ export default function Nav({
             <img
               src={adminAvatarUrl}
               alt="Admin avatar"
-              className="h-7 w-7 rounded-full border border-ink/20 object-cover"
+              className="h-8 w-8 rounded-full border border-ink/20 object-cover"
               referrerPolicy="no-referrer"
             />
           ) : (
