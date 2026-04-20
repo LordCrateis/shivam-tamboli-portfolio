@@ -145,10 +145,14 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
       return;
     }
 
-    const maxOrderIndex = projects.reduce((max, project) => {
-      const value = project.order_index ?? 0;
-      return value > max ? value : max;
-    }, 0);
+    let nextOrderIndex = 1;
+    if (!editor.id) {
+      const maxOrderIndex = projects.reduce((max, project) => {
+        const value = project.order_index ?? 0;
+        return value > max ? value : max;
+      }, 0);
+      nextOrderIndex = maxOrderIndex + 1;
+    }
 
     const payload = {
       title: editor.title.trim(),
@@ -160,8 +164,8 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
       status: editor.status,
       visible: true,
       order_index: editor.id
-        ? projects.find((project) => project.id === editor.id)?.order_index ?? maxOrderIndex + 1
-        : maxOrderIndex + 1,
+        ? projects.find((project) => project.id === editor.id)?.order_index ?? nextOrderIndex
+        : nextOrderIndex,
     };
 
     if (editor.id) {
@@ -395,7 +399,7 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
                 />
 
                 <span className="terminal-text text-xs text-ink-muted w-8 mt-1 shrink-0 relative z-20">
-                  {String(i + 1).padStart(2, '0')}
+                  {String(project.order_index ?? i + 1).padStart(2, '0')}
                 </span>
 
                 <div className="flex-1 min-w-0 relative z-20">

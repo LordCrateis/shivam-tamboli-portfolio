@@ -73,7 +73,7 @@ function parseRoute(hashValue: string): RouteState {
     return { kind: 'list', mode: 'visitor' };
   }
 
-  if (second === 'team' || second === 'shivam') {
+  if (second === 'team') {
     return { kind: 'list', mode: 'team' };
   }
 
@@ -286,7 +286,7 @@ export default function Blog({ isAdminSession }: BlogProps) {
         return;
       }
 
-      const { data, error } = await supabase.from('blogs').select('category').limit(500);
+      const { data, error } = await supabase.from('blogs').select('category');
       if (error || !data) {
         return;
       }

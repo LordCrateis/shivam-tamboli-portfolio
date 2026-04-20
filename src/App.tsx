@@ -15,6 +15,8 @@ import { supabase } from './lib/supabase';
 import { getAdminAvatarUrl, isAdminEmail } from './lib/admin';
 
 type AppPage = 'home' | 'blog' | 'admin';
+const ADMIN_OAUTH_REDIRECT_HASH = '/#/blog';
+// 'admin' is an ephemeral OAuth trigger state for the secret route, not a rendered page.
 
 function getCurrentPage(): AppPage {
   if (window.location.pathname === '/admin' || window.location.hash.startsWith('#/admin')) {
@@ -83,7 +85,7 @@ export default function App() {
     void supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/#/blog`,
+        redirectTo: `${window.location.origin}${ADMIN_OAUTH_REDIRECT_HASH}`,
       },
     });
   }, [page, isAdminSession]);

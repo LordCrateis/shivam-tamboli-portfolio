@@ -15,7 +15,6 @@ create table if not exists public.blogs (
 );
 
 alter table public.blogs
-  add column if not exists category text,
   add column if not exists published_at date;
 
 alter table public.blogs enable row level security;
