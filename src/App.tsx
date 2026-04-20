@@ -18,8 +18,10 @@ type AppPage = 'home' | 'blog' | 'admin';
 const ADMIN_OAUTH_REDIRECT_HASH = '/';
 // 'admin' is an ephemeral OAuth trigger state for the secret route, not a rendered page.
 
+const ADMIN_ROUTE = import.meta.env.VITE_ADMIN_ROUTE;
+
 function getCurrentPage(): AppPage {
-  if (window.location.pathname === '/admin' || window.location.hash.startsWith('#/admin')) {
+  if (window.location.pathname === `/${ADMIN_ROUTE}` || window.location.hash.startsWith(`#/${ADMIN_ROUTE}`)) {
     return 'admin';
   }
 
