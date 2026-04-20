@@ -13,7 +13,7 @@ import Contact from './components/Contact';
 import Blog from './components/Blog';
 import { supabase } from './lib/supabase';
 import { getAdminAvatarUrl, isAdminEmail } from './lib/admin';
-console.log('admin route:', import.meta.env.VITE_ADMIN_ROUTE)
+
 type AppPage = 'home' | 'blog' | 'admin';
 const ADMIN_OAUTH_REDIRECT_HASH = '/';
 // 'admin' is an ephemeral OAuth trigger state for the secret route, not a rendered page.
@@ -21,7 +21,6 @@ const ADMIN_OAUTH_REDIRECT_HASH = '/';
 const ADMIN_ROUTE = import.meta.env.VITE_ADMIN_ROUTE;
 
 function getCurrentPage(): AppPage {
-  console.log('hash:', window.location.hash, 'admin route:', `#/${ADMIN_ROUTE}`);
   if (window.location.hash.startsWith(`#/${ADMIN_ROUTE}`)) {
     return 'admin';
   }
