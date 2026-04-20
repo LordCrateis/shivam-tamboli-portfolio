@@ -21,7 +21,7 @@ const ADMIN_OAUTH_REDIRECT_HASH = '/';
 const ADMIN_ROUTE = import.meta.env.VITE_ADMIN_ROUTE;
 
 function getCurrentPage(): AppPage {
-  if (window.location.pathname === `/${ADMIN_ROUTE}` || window.location.hash.startsWith(`#/${ADMIN_ROUTE}`)) {
+  if (window.location.hash.startsWith(`#/${ADMIN_ROUTE}`)) {
     return 'admin';
   }
 
