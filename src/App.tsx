@@ -38,7 +38,9 @@ export default function App() {
   useEffect(() => {
     const onRouteChange = () => {
       setPage(getCurrentPage());
-      window.scrollTo({ top: 0, behavior: 'auto' });
+      if (window.location.hash.startsWith('#/')) {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
     };
 
     window.addEventListener('hashchange', onRouteChange);
