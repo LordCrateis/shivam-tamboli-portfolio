@@ -1,8 +1,9 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Heart, Pin } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const ALIAS_STORAGE_KEY = 'portfolio_alias';
+const ADMIN_REPLY_LABEL = 'Admin · Shivam';
 
 interface BlogInteractionsProps {
   blogId: string;
@@ -71,8 +72,13 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [activeReplyComposer, setActiveReplyComposer] = useState<string | null>(null);
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+  const commentIdsRef = useRef<string[]>([]);
 
   const commentIds = useMemo(() => comments.map((item) => item.id), [comments]);
+
+  useEffect(() => {
+    commentIdsRef.current = commentIds;
+  }, [commentIds]);
 
   const ensureAlias = (): string | null => {
     const directAlias = alias.trim();
@@ -188,8 +194,11 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
           }
         },
       )
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'blog_comment_replies' }, () => {
-        if (expanded && commentIds.length > 0) {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blog_comment_replies' }, (payload) => {
+        const nextCommentId =
+          (payload.new as { comment_id?: string } | null)?.comment_id ??
+          (payload.old as { comment_id?: string } | null)?.comment_id;
+        if (expanded && nextCommentId && commentIdsRef.current.includes(nextCommentId)) {
           void loadComments();
         }
       })
@@ -199,7 +208,7 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
       void supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blogId, expanded, commentIds.length]);
+  }, [blogId, expanded]);
 
   useEffect(() => {
     if (!expanded) {
@@ -442,7 +451,7 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
                                   <span className="text-[9px] font-bold text-[#2a9d8f]">A</span>
                                 )}
                               </span>
-                              <span className="text-xs font-bold text-[#2a9d8f]">Admin · Shivam</span>
+                              <span className="text-xs font-bold text-[#2a9d8f]">{ADMIN_REPLY_LABEL}</span>
                             </>
                           ) : (
                             <span className="text-xs font-semibold text-ink">{reply.alias}</span>

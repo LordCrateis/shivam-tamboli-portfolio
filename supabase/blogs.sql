@@ -44,7 +44,7 @@ declare
   next_like_count integer;
 begin
   update public.blogs
-  set like_count = coalesce(like_count, 0) + 1
+  set like_count = like_count + 1
   where id = blog_uuid
   returning like_count into next_like_count;
 
