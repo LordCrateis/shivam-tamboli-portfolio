@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpRight, ChevronDown, LogOut, Pencil, Plus, Trash2 } from 'lucide-react';
 import FadeUp from './FadeUp';
+import BlogInteractions from './BlogInteractions';
 import { supabase } from '../lib/supabase';
 
 type BlogMode = 'auto' | 'visitor' | 'team';
@@ -195,9 +196,10 @@ function sanitizeRichHtml(input: string): string {
 
 interface BlogProps {
   isAdminSession: boolean;
+  adminAvatarUrl?: string | null;
 }
 
-export default function Blog({ isAdminSession }: BlogProps) {
+export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
   const currentYear = new Date().getFullYear();
   const contentRef = useRef<HTMLDivElement | null>(null);
   const isUserEditingRef = useRef(false);
@@ -848,6 +850,12 @@ export default function Blog({ isAdminSession }: BlogProps) {
                         {post.excerpt || 'No excerpt provided.'}
                       </p>
 
+                      <BlogInteractions
+                        blogId={post.id}
+                        isAdminSession={isAdminSession}
+                        adminAvatarUrl={adminAvatarUrl}
+                      />
+
                       {isAdminSession && activeMode === 'team' && (
                         <div className="mt-4 flex flex-wrap items-center gap-2">
                           <button
@@ -941,6 +949,12 @@ export default function Blog({ isAdminSession }: BlogProps) {
                 dangerouslySetInnerHTML={{
                   __html: sanitizeRichHtml(activePost.content),
                 }}
+              />
+
+              <BlogInteractions
+                blogId={activePost.id}
+                isAdminSession={isAdminSession}
+                adminAvatarUrl={adminAvatarUrl}
               />
 
               <div className="mt-12">
