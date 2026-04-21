@@ -94,9 +94,10 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
     setError(null);
 
     const { error: insertError } = await supabase.from('project_ratings').insert({
-      project_uuid: projectId,
-      value,
-    });
+  project_uuid: projectId,
+  value,
+  fingerprint: getFingerprint(),
+});
 
     if (insertError) {
       setError('Unable to submit your rating right now.');
