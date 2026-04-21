@@ -26,6 +26,16 @@ function StarRow({ value }: { value: number }) {
   );
 }
 
+function getFingerprint(): string {
+  const key = 'portfolio_fp';
+  let fp = localStorage.getItem(key);
+  if (!fp) {
+    fp = crypto.randomUUID();
+    localStorage.setItem(key, fp);
+  }
+  return fp;
+}
+
 export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
   const [average, setAverage] = useState(0);
   const [count, setCount] = useState(0);
@@ -37,7 +47,7 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
   const displayAverage = useMemo(() => (count === 0 ? 0 : Math.round(average * 10) / 10), [average, count]);
 
   const loadRatings = async () => {
-    const { data, error: queryError } = await supabase.from('project_ratings').select('value').eq('project_id', projectId);
+    const { data, error: queryError } = await supabase.from('project_ratings').select('value').eq('project_uuid', projectId);
 
     if (queryError) {
       setError('Unable to load ratings right now.');
@@ -66,7 +76,7 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
       .channel(`project-ratings-${projectId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'project_ratings', filter: `project_id=eq.${projectId}` },
+        { event: '*', schema: 'public', table: 'project_ratings', filter: `project_uuid=eq.${projectId}` },
         () => {
           void loadRatings();
         },
@@ -84,7 +94,7 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
     setError(null);
 
     const { error: insertError } = await supabase.from('project_ratings').insert({
-      project_id: projectId,
+      project_uuid: projectId,
       value,
     });
 
