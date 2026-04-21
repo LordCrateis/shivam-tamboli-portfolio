@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
 import FadeUp from './FadeUp';
+import ProjectRatings from './ProjectRatings';
 import { supabase } from '../lib/supabase';
 
 interface ProjectRecord {
@@ -474,6 +475,8 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
                       {normalizeCategory(project.category)}
                     </span>
                   </div>
+
+                  <ProjectRatings projectId={project.id} />
 
                   {isAdminSession && (
                     <div className="flex flex-wrap items-center gap-2">

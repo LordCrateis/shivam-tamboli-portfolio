@@ -117,7 +117,7 @@ export default function App() {
             <Nav isBlogPage={page === 'blog'} isAdminSession={isAdminSession} adminAvatarUrl={adminAvatarUrl} />
             <main className="bg-cream min-h-screen">
               {page === 'blog' ? (
-                <Blog isAdminSession={isAdminSession} />
+                <Blog isAdminSession={isAdminSession} adminAvatarUrl={adminAvatarUrl} />
               ) : (
                 <>
                   <Hero />
