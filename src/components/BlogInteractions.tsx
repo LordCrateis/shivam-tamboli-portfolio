@@ -6,6 +6,7 @@ const ALIAS_STORAGE_KEY = 'portfolio_alias';
 const ADMIN_REPLY_LABEL = 'Admin · Shivam';
 const COMMENT_RATE_LIMIT_KEY = 'portfolio_comment_last';
 const COMMENT_RATE_LIMIT_MS = 60_000;
+const COMMENT_RATE_LIMIT_FUTURE_SKEW_MS = 5_000;
 const COMMENTS_PAGE_SIZE = 10;
 
 
@@ -18,7 +19,6 @@ interface BlogInteractionsProps {
 
 interface BlogComment {
   id: string;
-  blog_id: string;
   alias: string;
   text: string;
   created_at: string;
@@ -328,7 +328,11 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
     try {
       const lastRaw = localStorage.getItem(COMMENT_RATE_LIMIT_KEY);
       const lastTimestamp = lastRaw ? parseInt(lastRaw, 10) : 0;
-      if (Number.isNaN(lastTimestamp) || lastTimestamp < 0 || lastTimestamp > now) {
+      if (
+        Number.isNaN(lastTimestamp) ||
+        lastTimestamp < 0 ||
+        lastTimestamp > now + COMMENT_RATE_LIMIT_FUTURE_SKEW_MS
+      ) {
         localStorage.removeItem(COMMENT_RATE_LIMIT_KEY);
       } else if (lastTimestamp > 0 && now - lastTimestamp < COMMENT_RATE_LIMIT_MS) {
         setCommentNotice('Please wait before commenting again.');

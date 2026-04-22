@@ -39,6 +39,7 @@ const DEFAULT_BLOG_CATEGORIES = ['General', 'Engineering', 'Machine Learning', '
 const CUSTOM_CATEGORY_VALUE = '__custom__';
 const PG_UNDEFINED_TABLE_ERROR_CODE = '42P01';
 const SEARCH_ICON_URL = 'https://cdn.jsdelivr.net/npm/lucide-static@0.468.0/icons/search.svg';
+const UNREAD_REPORTS_POLL_INTERVAL_MS = 60_000;
 
 const EMPTY_EDITOR: EditorState = {
   id: null,
@@ -413,7 +414,7 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
 
     const intervalId = window.setInterval(() => {
       void loadUnreadReportsCount();
-    }, 60_000);
+    }, UNREAD_REPORTS_POLL_INTERVAL_MS);
 
     return () => {
       window.clearInterval(intervalId);
