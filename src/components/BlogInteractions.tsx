@@ -5,8 +5,7 @@ import { supabase } from '../lib/supabase';
 const ALIAS_STORAGE_KEY = 'portfolio_alias';
 const ADMIN_REPLY_LABEL = 'Admin · Shivam';
 
-const { error } = await supabase.from('blog_comments').delete().eq('id', commentId);
-console.log('delete error:', error);
+
 
 interface BlogInteractionsProps {
   blogId: string;
@@ -327,6 +326,7 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
 
   const deleteComment = async (commentId: string) => {
   const { error } = await supabase.from('blog_comments').delete().eq('id', commentId);
+  console.log('delete error:', error);
   if (error) {
     setCommentsError('Unable to delete this comment right now.');
     return;
