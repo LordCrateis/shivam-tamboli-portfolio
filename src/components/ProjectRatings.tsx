@@ -93,11 +93,7 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
   useEffect(() => {
     const loadRatingEligibility = async () => {
       const sessionRated = hasSessionRated(projectId);
-      if (sessionRated) {
-        setAlreadyRated(true);
-      } else {
-        setAlreadyRated(false);
-      }
+      setAlreadyRated(sessionRated);
 
       const { data, error: eligibilityError } = await supabase
         .from('project_ratings')

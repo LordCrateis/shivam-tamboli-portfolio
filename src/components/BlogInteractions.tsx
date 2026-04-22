@@ -158,7 +158,7 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
 
     const { data: commentRows, error: commentError } = await supabase
       .from('blog_comments')
-      .select('id,blog_id,alias,text,created_at,edited_at,pinned')
+      .select('id,alias,text,created_at,edited_at,pinned')
       .eq('blog_id', blogId)
       .order('pinned', { ascending: false })
       .order('created_at', { ascending: false })
@@ -327,8 +327,10 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
     const now = Date.now();
     try {
       const lastRaw = localStorage.getItem(COMMENT_RATE_LIMIT_KEY);
-      const lastTimestamp = lastRaw ? Number(lastRaw) : 0;
-      if (Number.isFinite(lastTimestamp) && lastTimestamp > 0 && now - lastTimestamp < COMMENT_RATE_LIMIT_MS) {
+      const lastTimestamp = lastRaw ? Number.parseInt(lastRaw, 10) : 0;
+      if (Number.isNaN(lastTimestamp) || lastTimestamp < 0) {
+        localStorage.removeItem(COMMENT_RATE_LIMIT_KEY);
+      } else if (lastTimestamp > 0 && now - lastTimestamp < COMMENT_RATE_LIMIT_MS) {
         setCommentNotice('Please wait before commenting again.');
         return;
       }
