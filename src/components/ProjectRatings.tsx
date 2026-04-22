@@ -100,7 +100,11 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
 });
 
     if (insertError) {
-      setError('Unable to submit your rating right now.');
+      if (insertError.code === '23505') {
+        setError("You've already rated this");
+      } else {
+        setError('Unable to submit your rating right now.');
+      }
       setSubmitting(false);
       return;
     }
@@ -144,7 +148,7 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
       </div>
 
       {thanksVisible && <p className="mt-1 text-xs text-[#2a9d8f]">Thanks for rating!</p>}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-ink-muted">{error}</p>}
     </div>
   );
 }

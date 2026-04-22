@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Heart, Pin } from 'lucide-react';
+import { ChevronDown, Heart, Pin, PinOff, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const ALIAS_STORAGE_KEY = 'portfolio_alias';
@@ -312,6 +312,37 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
     void loadComments();
   };
 
+  const unpinComment = async (commentId: string) => {
+    const { error } = await supabase.from('blog_comments').update({ pinned: false }).eq('id', commentId);
+    if (error) {
+      setCommentsError('Unable to unpin this comment right now.');
+      return;
+    }
+
+    void loadComments();
+  };
+
+  const deleteComment = async (commentId: string) => {
+    const { error } = await supabase.from('blog_comments').delete().eq('id', commentId);
+    if (error) {
+      setCommentsError('Unable to delete this comment right now.');
+      return;
+    }
+
+    void loadComments();
+    void loadCommentCount();
+  };
+
+  const deleteReply = async (replyId: string) => {
+    const { error } = await supabase.from('blog_comment_replies').delete().eq('id', replyId);
+    if (error) {
+      setCommentsError('Unable to delete this reply right now.');
+      return;
+    }
+
+    void loadComments();
+  };
+
   return (
     <div className="mt-5 border-t border-ink/10 pt-4">
       <div className="flex flex-wrap items-center gap-4">
@@ -382,15 +413,36 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
                     </span>
                   )}
                   <span className="text-xs text-ink-muted">{formatTimestamp(comment.created_at)}</span>
-                  {isAdminSession && !comment.pinned && (
-                    <button
-                      type="button"
-                      onClick={() => pinComment(comment.id)}
-                      className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
-                    >
-                      <Pin size={11} />
-                      Pin
-                    </button>
+                  {isAdminSession && (
+                    <div className="ml-auto inline-flex items-center gap-2">
+                      {comment.pinned ? (
+                        <button
+                          type="button"
+                          onClick={() => unpinComment(comment.id)}
+                          className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                        >
+                          <PinOff size={11} />
+                          Unpin
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => pinComment(comment.id)}
+                          className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                        >
+                          <Pin size={11} />
+                          Pin
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => deleteComment(comment.id)}
+                        className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                      >
+                        <Trash2 size={11} />
+                        Delete
+                      </button>
+                    </div>
                   )}
                 </div>
                 <p className="text-sm text-ink-muted leading-relaxed">{comment.text}</p>
@@ -465,6 +517,16 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
                             <span className="text-xs font-semibold text-ink">{reply.alias}</span>
                           )}
                           <span className="text-[11px] text-ink-muted">{formatTimestamp(reply.created_at)}</span>
+                          {isAdminSession && (
+                            <button
+                              type="button"
+                              onClick={() => deleteReply(reply.id)}
+                              className="ml-auto inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                            >
+                              <Trash2 size={11} />
+                              Delete
+                            </button>
+                          )}
                         </div>
                         <p className="text-sm text-ink-muted leading-relaxed">{reply.text}</p>
                       </div>
