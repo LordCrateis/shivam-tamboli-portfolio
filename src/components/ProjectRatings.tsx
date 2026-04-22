@@ -36,6 +36,26 @@ function getFingerprint(): string {
   return fp;
 }
 
+function getProjectRatedSessionKey(projectId: string): string {
+  return `portfolio_rated_${projectId}`;
+}
+
+function hasSessionRated(projectId: string): boolean {
+  try {
+    return sessionStorage.getItem(getProjectRatedSessionKey(projectId)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markSessionRated(projectId: string): void {
+  try {
+    sessionStorage.setItem(getProjectRatedSessionKey(projectId), '1');
+  } catch {
+    // Ignore storage failures silently.
+  }
+}
+
 export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
   const [average, setAverage] = useState(0);
   const [count, setCount] = useState(0);
@@ -43,6 +63,7 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
   const [submitting, setSubmitting] = useState(false);
   const [thanksVisible, setThanksVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [alreadyRated, setAlreadyRated] = useState(false);
 
   const displayAverage = useMemo(() => (count === 0 ? 0 : Math.round(average * 10) / 10), [average, count]);
 
@@ -70,7 +91,34 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
   };
 
   useEffect(() => {
+    const loadRatingEligibility = async () => {
+      const sessionRated = hasSessionRated(projectId);
+      if (sessionRated) {
+        setAlreadyRated(true);
+      } else {
+        setAlreadyRated(false);
+      }
+
+      const { data, error: eligibilityError } = await supabase
+        .from('project_ratings')
+        .select('id')
+        .eq('project_uuid', projectId)
+        .eq('fingerprint', getFingerprint())
+        .limit(1)
+        .maybeSingle();
+
+      if (eligibilityError) {
+        return;
+      }
+
+      if (data) {
+        setAlreadyRated(true);
+        markSessionRated(projectId);
+      }
+    };
+
     void loadRatings();
+    void loadRatingEligibility();
 
     const channel = supabase
       .channel(`project-ratings-${projectId}`)
@@ -90,6 +138,10 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
   }, [projectId]);
 
   const submitRating = async (value: number) => {
+    if (alreadyRated) {
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -101,7 +153,8 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
 
     if (insertError) {
       if (insertError.code === '23505') {
-        setError("You've already rated this");
+        setAlreadyRated(true);
+        markSessionRated(projectId);
       } else {
         setError('Unable to submit your rating right now.');
       }
@@ -111,6 +164,8 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
 
     setThanksVisible(true);
     window.setTimeout(() => setThanksVisible(false), 1800);
+    setAlreadyRated(true);
+    markSessionRated(projectId);
     setSubmitting(false);
     void loadRatings();
   };
@@ -126,7 +181,7 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
             <button
               key={value}
               type="button"
-              disabled={submitting}
+              disabled={submitting || alreadyRated}
               onMouseEnter={() => setHoveredValue(value)}
               onMouseLeave={() => setHoveredValue(null)}
               onFocus={() => setHoveredValue(value)}
@@ -148,6 +203,7 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
       </div>
 
       {thanksVisible && <p className="mt-1 text-xs text-[#2a9d8f]">Thanks for rating!</p>}
+      {alreadyRated && <p className="mt-1 text-xs text-ink-muted">You've already rated this</p>}
       {error && <p className="mt-1 text-xs text-ink-muted">{error}</p>}
     </div>
   );
