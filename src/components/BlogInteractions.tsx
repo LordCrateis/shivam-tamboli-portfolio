@@ -327,8 +327,8 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
     const now = Date.now();
     try {
       const lastRaw = localStorage.getItem(COMMENT_RATE_LIMIT_KEY);
-      const lastTimestamp = lastRaw ? Number.parseInt(lastRaw, 10) : 0;
-      if (Number.isNaN(lastTimestamp) || lastTimestamp < 0) {
+      const lastTimestamp = lastRaw ? parseInt(lastRaw, 10) : 0;
+      if (Number.isNaN(lastTimestamp) || lastTimestamp < 0 || lastTimestamp > now) {
         localStorage.removeItem(COMMENT_RATE_LIMIT_KEY);
       } else if (lastTimestamp > 0 && now - lastTimestamp < COMMENT_RATE_LIMIT_MS) {
         setCommentNotice('Please wait before commenting again.');
