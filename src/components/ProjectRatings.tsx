@@ -168,7 +168,7 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
 
   return (
     <div className="mt-4 border-t border-ink/10 pt-3">
-      <div className="mb-2 flex flex-wrap items-center gap-2">
+      <div className="mb-2 flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>
         {Array.from({ length: 5 }, (_, index) => {
           const value = index + 1;
           const isFilled = (hoveredValue ?? 0) >= value;

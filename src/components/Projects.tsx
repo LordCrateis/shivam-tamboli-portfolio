@@ -227,6 +227,14 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
     await fetchProjects();
   };
 
+  const openProject = (liveUrl: string | null) => {
+    if (!liveUrl) {
+      return;
+    }
+
+    window.open(liveUrl, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <section id="work" className="py-28 px-6 md:px-12 lg:px-16">
       <FadeUp>
@@ -410,6 +418,7 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
       <div className="divide-y divide-ink/10 border-t border-ink/10">
         {filteredProjects.map((project, i) => {
           const techTags = project.tech_stack ?? [];
+          const canOpenProject = Boolean(project.live_url);
 
           return (
             <motion.div
@@ -425,19 +434,23 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
                 style={{
                   backgroundColor: hovered === i ? 'rgba(17,17,17,0.04)' : 'transparent',
                 }}
+                onClick={canOpenProject ? () => openProject(project.live_url) : undefined}
+                onKeyDown={
+                  canOpenProject
+                    ? (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          openProject(project.live_url);
+                        }
+                      }
+                    : undefined
+                }
                 onMouseEnter={() => setHovered(i)}
                 onMouseLeave={() => setHovered(null)}
                 data-cursor="pointer"
+                role={canOpenProject ? 'button' : undefined}
+                tabIndex={canOpenProject ? 0 : undefined}
               >
-                {project.live_url && (
-                  <a
-                    href={project.live_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute inset-0 z-10"
-                  ></a>
-                )}
-
                 <motion.div
                   className="absolute left-0 top-0 bottom-0 w-0.5 bg-ink"
                   initial={{ scaleY: 0 }}
@@ -479,8 +492,9 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
                   <ProjectRatings projectId={project.id} />
 
                   {isAdminSession && (
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>
                       <button
+                        type="button"
                         onClick={() => handleEdit(project)}
                         className="inline-flex items-center gap-1 border border-ink/20 px-3 py-1.5 text-xs uppercase tracking-wide"
                         data-cursor="pointer"
@@ -489,6 +503,7 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
                         Edit
                       </button>
                       <button
+                        type="button"
                         onClick={() => setPendingDeleteId(project.id)}
                         className="inline-flex items-center gap-1 border border-red-300 text-red-600 px-3 py-1.5 text-xs uppercase tracking-wide"
                         data-cursor="pointer"
@@ -500,9 +515,13 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
                   )}
 
                   {isAdminSession && pendingDeleteId === project.id && (
-                    <div className="mt-3 flex flex-wrap items-center gap-2 border border-red-200 bg-red-50/40 px-3 py-2">
+                    <div
+                      className="mt-3 flex flex-wrap items-center gap-2 border border-red-200 bg-red-50/40 px-3 py-2"
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       <p className="text-xs text-red-700">Delete this project permanently?</p>
                       <button
+                        type="button"
                         onClick={() => handleDelete(project.id)}
                         className="border border-red-300 text-red-700 px-2 py-1 text-xs uppercase tracking-wide"
                         data-cursor="pointer"
@@ -510,6 +529,7 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
                         Confirm
                       </button>
                       <button
+                        type="button"
                         onClick={() => setPendingDeleteId(null)}
                         className="border border-ink/20 text-ink px-2 py-1 text-xs uppercase tracking-wide"
                         data-cursor="pointer"

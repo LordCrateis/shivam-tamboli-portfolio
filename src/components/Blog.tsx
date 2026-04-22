@@ -441,7 +441,7 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setEditor(EMPTY_EDITOR);
-    window.location.hash = '/blog';
+    window.location.hash = '/';
   };
 
   const handleSave = async (event: FormEvent) => {
@@ -653,6 +653,7 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
                     )}
                   </a>
                   <button
+                    type="button"
                     onClick={openNewEditor}
                     className="inline-flex items-center gap-2 bg-ink text-cream px-3 py-2 text-xs uppercase tracking-wide"
                     data-cursor="pointer"
@@ -661,6 +662,7 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
                     New Post
                   </button>
                   <button
+                    type="button"
                     onClick={() => {
                       window.location.hash = '/blog/roles';
                     }}
@@ -670,6 +672,7 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
                     Modes
                   </button>
                   <button
+                    type="button"
                     onClick={handleLogout}
                     className="inline-flex items-center gap-2 border border-ink/20 px-3 py-2 text-xs uppercase tracking-wide text-ink"
                     data-cursor="pointer"
