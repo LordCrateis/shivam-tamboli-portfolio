@@ -326,14 +326,14 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
   };
 
   const deleteComment = async (commentId: string) => {
-    const { error } = await supabase.from('blog_comments').delete().eq('id', commentId);
-    if (error) {
-      setCommentsError('Unable to delete this comment right now.');
-      return;
-    }
-    void loadComments();
-    void loadCommentCount();
-  };
+  const { error } = await supabase.from('blog_comments').delete().eq('id', commentId);
+  if (error) {
+    setCommentsError('Unable to delete this comment right now.');
+    return;
+  }
+  void loadComments();
+  void loadCommentCount();
+};
 
   const deleteReply = async (replyId: string) => {
     const { error } = await supabase.from('blog_comment_replies').delete().eq('id', replyId);
