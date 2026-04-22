@@ -609,6 +609,13 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
                   Admin mode active — full editor access
                 </p>
                 <div className="flex items-center gap-3">
+                  <a
+                    href="#/reports"
+                    className="inline-flex items-center gap-2 border border-[#2a9d8f]/40 px-3 py-2 text-xs uppercase tracking-wide text-[#2a9d8f]"
+                    data-cursor="pointer"
+                  >
+                    Reports
+                  </a>
                   <button
                     onClick={openNewEditor}
                     className="inline-flex items-center gap-2 bg-ink text-cream px-3 py-2 text-xs uppercase tracking-wide"

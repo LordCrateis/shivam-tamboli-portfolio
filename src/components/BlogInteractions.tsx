@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Heart, Pin, PinOff, Trash2 } from 'lucide-react';
+import { ChevronDown, Heart, MoreHorizontal, Pin, PinOff, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const ALIAS_STORAGE_KEY = 'portfolio_alias';
@@ -84,7 +84,16 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [activeReplyComposer, setActiveReplyComposer] = useState<string | null>(null);
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+  const [openMenuCommentId, setOpenMenuCommentId] = useState<string | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editedCommentText, setEditedCommentText] = useState('');
+  const [pendingReportCommentId, setPendingReportCommentId] = useState<string | null>(null);
+  const [commentActionNotice, setCommentActionNotice] = useState<{ commentId: string; message: 'Copied' | 'Reported' } | null>(
+    null,
+  );
   const commentIdsRef = useRef<string[]>([]);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const actionNoticeTimeoutRef = useRef<number | null>(null);
 
   const commentIds = useMemo(() => comments.map((item) => item.id), [comments]);
 
@@ -230,6 +239,33 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expanded]);
 
+  useEffect(() => {
+    if (!openMenuCommentId) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (menuRef.current?.contains(event.target as Node)) {
+        return;
+      }
+      setOpenMenuCommentId(null);
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, [openMenuCommentId]);
+
+  useEffect(
+    () => () => {
+      if (actionNoticeTimeoutRef.current) {
+        window.clearTimeout(actionNoticeTimeoutRef.current);
+      }
+    },
+    [],
+  );
+
   const handleAliasChange = (value: string) => {
     setAlias(value);
     saveAliasToStorage(value.trim());
@@ -345,6 +381,77 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
     void loadComments();
   };
 
+  const showCommentActionNotice = (commentId: string, message: 'Copied' | 'Reported') => {
+    if (actionNoticeTimeoutRef.current) {
+      window.clearTimeout(actionNoticeTimeoutRef.current);
+    }
+
+    setCommentActionNotice({ commentId, message });
+    actionNoticeTimeoutRef.current = window.setTimeout(() => {
+      setCommentActionNotice(null);
+    }, 1600);
+  };
+
+  const saveEditedComment = async (commentId: string) => {
+    const text = editedCommentText.trim();
+    if (!text) {
+      return;
+    }
+
+    const { error } = await supabase.from('blog_comments').update({ text }).eq('id', commentId);
+    if (error) {
+      setCommentsError('Unable to edit this comment right now.');
+      return;
+    }
+
+    setEditingCommentId(null);
+    setEditedCommentText('');
+    void loadComments();
+  };
+
+  const selfDeleteComment = async (commentId: string) => {
+    const { error } = await supabase.from('blog_comments').delete().eq('id', commentId);
+    if (error) {
+      setCommentsError('Unable to delete this comment right now.');
+      return;
+    }
+
+    if (editingCommentId === commentId) {
+      setEditingCommentId(null);
+      setEditedCommentText('');
+    }
+    if (pendingReportCommentId === commentId) {
+      setPendingReportCommentId(null);
+    }
+    setOpenMenuCommentId(null);
+    void loadComments();
+    void loadCommentCount();
+  };
+
+  const submitCommentReport = async (commentId: string, comment: CommentWithReplies) => {
+    const { error } = await supabase.from('blog_comment_reports').insert({
+      comment_id: commentId,
+      comment_text: comment.text,
+      alias: comment.alias,
+    });
+    if (error) {
+      setCommentsError('Unable to report this comment right now.');
+      return;
+    }
+
+    setPendingReportCommentId(null);
+    showCommentActionNotice(commentId, 'Reported');
+  };
+
+  const copyCommentText = async (commentId: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showCommentActionNotice(commentId, 'Copied');
+    } catch {
+      setCommentsError('Unable to copy this comment right now.');
+    }
+  };
+
   return (
     <div className="mt-5 border-t border-ink/10 pt-4">
       <div className="flex flex-wrap items-center gap-4">
@@ -415,39 +522,155 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
                     </span>
                   )}
                   <span className="text-xs text-ink-muted">{formatTimestamp(comment.created_at)}</span>
-                  {isAdminSession && (
-                    <div className="ml-auto inline-flex items-center gap-2">
-                      {comment.pinned ? (
-                        <button
-                          type="button"
-                          onClick={() => unpinComment(comment.id)}
-                          className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
-                        >
-                          <PinOff size={11} />
-                          Unpin
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => pinComment(comment.id)}
-                          className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
-                        >
-                          <Pin size={11} />
-                          Pin
-                        </button>
-                      )}
+                  <div className="ml-auto flex items-center gap-2">
+                    <div ref={openMenuCommentId === comment.id ? menuRef : null} className="relative">
                       <button
                         type="button"
-                        onClick={() => deleteComment(comment.id)}
-                        className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                        onClick={() => setOpenMenuCommentId((prev) => (prev === comment.id ? null : comment.id))}
+                        className="inline-flex items-center justify-center text-[#2a9d8f]"
+                        aria-label="Comment actions"
                       >
-                        <Trash2 size={11} />
-                        Delete
+                        <MoreHorizontal size={14} />
+                      </button>
+                      {openMenuCommentId === comment.id && (
+                        <div className="absolute right-0 top-5 z-10 min-w-28 border border-ink/15 bg-cream p-1 shadow-sm">
+                          {comment.alias === alias ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditedCommentText(comment.text);
+                                  setEditingCommentId(comment.id);
+                                  setOpenMenuCommentId(null);
+                                }}
+                                className="block w-full px-2 py-1 text-left text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => void selfDeleteComment(comment.id)}
+                                className="block w-full px-2 py-1 text-left text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPendingReportCommentId(comment.id);
+                                  setOpenMenuCommentId(null);
+                                }}
+                                className="block w-full px-2 py-1 text-left text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                              >
+                                Report
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenMenuCommentId(null);
+                                  void copyCommentText(comment.id, comment.text);
+                                }}
+                                className="block w-full px-2 py-1 text-left text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                              >
+                                Copy
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {isAdminSession && (
+                      <div className="inline-flex items-center gap-2">
+                        {comment.pinned ? (
+                          <button
+                            type="button"
+                            onClick={() => unpinComment(comment.id)}
+                            className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                          >
+                            <PinOff size={11} />
+                            Unpin
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => pinComment(comment.id)}
+                            className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                          >
+                            <Pin size={11} />
+                            Pin
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => deleteComment(comment.id)}
+                          className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                        >
+                          <Trash2 size={11} />
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {editingCommentId === comment.id ? (
+                  <div className="space-y-2">
+                    <textarea
+                      value={editedCommentText}
+                      onChange={(event) => setEditedCommentText(event.target.value)}
+                      className="w-full min-h-20 border border-ink/20 bg-transparent px-3 py-2 text-sm text-ink outline-none"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void saveEditedComment(comment.id)}
+                        className="border border-[#2a9d8f]/40 px-2 py-1 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingCommentId(null);
+                          setEditedCommentText('');
+                        }}
+                        className="border border-ink/20 px-2 py-1 text-[10px] uppercase tracking-wide text-ink-muted"
+                      >
+                        Cancel
                       </button>
                     </div>
-                  )}
-                </div>
-                <p className="text-sm text-ink-muted leading-relaxed">{comment.text}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-ink-muted leading-relaxed">{comment.text}</p>
+                )}
+
+                {pendingReportCommentId === comment.id && comment.alias !== alias && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 border border-[#2a9d8f]/30 bg-[#2a9d8f]/5 px-2 py-1.5">
+                    <p className="text-[10px] uppercase tracking-wide text-[#2a9d8f]">
+                      Are you sure you want to report this comment?
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void submitCommentReport(comment.id, comment)}
+                      className="border border-[#2a9d8f]/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-[#2a9d8f]"
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPendingReportCommentId(null)}
+                      className="border border-ink/20 px-2 py-0.5 text-[10px] uppercase tracking-wide text-ink-muted"
+                    >
+                      No
+                    </button>
+                  </div>
+                )}
+
+                {commentActionNotice?.commentId === comment.id && (
+                  <p className="mt-2 text-[10px] uppercase tracking-wide text-[#2a9d8f]">{commentActionNotice.message}</p>
+                )}
 
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <button

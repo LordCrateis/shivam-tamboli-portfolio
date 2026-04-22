@@ -11,16 +11,20 @@ import Projects from './components/Projects';
 import Stack from './components/Stack';
 import Contact from './components/Contact';
 import Blog from './components/Blog';
+import BlogReports from './components/BlogReports';
 import { supabase } from './lib/supabase';
 import { getAdminAvatarUrl, isAdminEmail } from './lib/admin';
 console.log(import.meta.env);
-type AppPage = 'home' | 'blog' | 'admin';
+type AppPage = 'home' | 'blog' | 'admin' | 'reports';
 const ADMIN_OAUTH_REDIRECT_HASH = '/';
 // 'admin' is an ephemeral OAuth trigger state for the secret route, not a rendered page.
 
 const ADMIN_ROUTE = import.meta.env.VITE_ADMIN_ROUTE;
 
 function getCurrentPage(): AppPage {
+  if (window.location.hash.startsWith('#/reports')) {
+    return 'reports';
+  }
   if (window.location.hash.startsWith(`#/${ADMIN_ROUTE}`)) {
     return 'admin';
   }
@@ -80,7 +84,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (page !== 'admin' || isAdminSession) {
+    if ((page !== 'admin' && page !== 'reports') || isAdminSession) {
       return;
     }
 
@@ -114,10 +118,12 @@ export default function App() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            <Nav isBlogPage={page === 'blog'} isAdminSession={isAdminSession} adminAvatarUrl={adminAvatarUrl} />
+            <Nav isBlogPage={page === 'blog' || page === 'reports'} isAdminSession={isAdminSession} adminAvatarUrl={adminAvatarUrl} />
             <main className="bg-cream min-h-screen">
               {page === 'blog' ? (
                 <Blog isAdminSession={isAdminSession} adminAvatarUrl={adminAvatarUrl} />
+              ) : page === 'reports' ? (
+                <BlogReports isAdminSession={isAdminSession} />
               ) : (
                 <>
                   <Hero />

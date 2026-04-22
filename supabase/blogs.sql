@@ -138,6 +138,38 @@ create policy "Public can insert replies"
 on public.blog_comment_replies for insert
 with check (true);
 
+create table if not exists public.blog_comment_reports (
+  id uuid default gen_random_uuid() primary key,
+  comment_id uuid not null references public.blog_comments(id) on delete cascade,
+  alias text not null,
+  comment_text text not null,
+  created_at timestamp with time zone not null default timezone('utc', now())
+);
+
+create index if not exists blog_comment_reports_created_at_idx
+on public.blog_comment_reports(created_at desc);
+
+create index if not exists blog_comment_reports_comment_id_idx
+on public.blog_comment_reports(comment_id);
+
+alter table public.blog_comment_reports enable row level security;
+
+drop policy if exists "Admin can read comment reports" on public.blog_comment_reports;
+drop policy if exists "Public can insert comment reports" on public.blog_comment_reports;
+drop policy if exists "Admin can delete comment reports" on public.blog_comment_reports;
+
+create policy "Admin can read comment reports"
+on public.blog_comment_reports for select
+using (lower((auth.jwt() ->> 'email')) = 'shivamtamboli62@gmail.com');
+
+create policy "Public can insert comment reports"
+on public.blog_comment_reports for insert
+with check (true);
+
+create policy "Admin can delete comment reports"
+on public.blog_comment_reports for delete
+using (lower((auth.jwt() ->> 'email')) = 'shivamtamboli62@gmail.com');
+
 create table if not exists public.project_ratings (
   id uuid default gen_random_uuid() primary key,
   project_id uuid not null references public.projects(id) on delete cascade,
