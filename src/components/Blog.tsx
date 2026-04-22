@@ -439,10 +439,11 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setEditor(EMPTY_EDITOR);
-    window.location.hash = '/';
-  };
+  await supabase.auth.signOut();
+  setEditor(EMPTY_EDITOR);
+  window.location.hash = '/';
+  window.location.reload();
+};
 
   const handleSave = async (event: FormEvent) => {
     event.preventDefault();
