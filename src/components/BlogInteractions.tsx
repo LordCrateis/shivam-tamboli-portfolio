@@ -58,6 +58,16 @@ function saveAliasToStorage(alias: string): void {
   }
 }
 
+function getFingerprint(): string {
+  const key = 'portfolio_fp';
+  let fp = localStorage.getItem(key);
+  if (!fp) {
+    fp = crypto.randomUUID();
+    localStorage.setItem(key, fp);
+  }
+  return fp;
+}
+
 export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUrl }: BlogInteractionsProps) {
   const [likeCount, setLikeCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
@@ -224,20 +234,18 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
   };
 
   const handleLike = async () => {
-    const { data, error } = await supabase.rpc('increment_blog_like', { blog_uuid: blogId });
+  const { data, error } = await supabase.rpc('increment_blog_like', {
+    blog_uuid: blogId,
+    fingerprint: getFingerprint(),
+  });
 
-    if (!error && typeof data === 'number') {
-      setLikeCount(data);
-    } else {
-      const optimistic = likeCount + 1;
-      setLikeCount(optimistic);
-      await supabase.from('blogs').update({ like_count: optimistic }).eq('id', blogId);
-      void loadLikeCount();
-    }
+  if (!error && typeof data === 'number') {
+    setLikeCount(data);
+  }
 
-    setIsLikedPulse(true);
-    window.setTimeout(() => setIsLikedPulse(false), 700);
-  };
+  setIsLikedPulse(true);
+  window.setTimeout(() => setIsLikedPulse(false), 700);
+};
 
   const handleCommentSubmit = async (event: FormEvent) => {
     event.preventDefault();
