@@ -4,6 +4,10 @@ import { supabase } from '../lib/supabase';
 
 const ALIAS_STORAGE_KEY = 'portfolio_alias';
 const ADMIN_REPLY_LABEL = 'Admin · Shivam';
+const COMMENT_RATE_LIMIT_KEY = 'portfolio_comment_last';
+const COMMENT_RATE_LIMIT_MS = 60_000;
+const COMMENT_RATE_LIMIT_FUTURE_SKEW_MS = 5_000;
+const COMMENTS_PAGE_SIZE = 10;
 
 
 
@@ -15,10 +19,10 @@ interface BlogInteractionsProps {
 
 interface BlogComment {
   id: string;
-  blog_id: string;
   alias: string;
   text: string;
   created_at: string;
+  edited_at: string | null;
   pinned: boolean;
 }
 
@@ -80,7 +84,11 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState<CommentWithReplies[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [loadingMoreComments, setLoadingMoreComments] = useState(false);
+  const [currentCommentsPage, setCurrentCommentsPage] = useState(0);
+  const [hasMoreComments, setHasMoreComments] = useState(true);
   const [commentsError, setCommentsError] = useState<string | null>(null);
+  const [commentNotice, setCommentNotice] = useState<string | null>(null);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [activeReplyComposer, setActiveReplyComposer] = useState<string | null>(null);
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
@@ -140,28 +148,41 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
     setCommentCount(count ?? 0);
   };
 
-  const loadComments = async () => {
-    setLoadingComments(true);
+  const loadComments = async (page = 0, append = false) => {
+    if (append) {
+      setLoadingMoreComments(true);
+    } else {
+      setLoadingComments(true);
+    }
     setCommentsError(null);
 
     const { data: commentRows, error: commentError } = await supabase
       .from('blog_comments')
-      .select('id,blog_id,alias,text,created_at,pinned')
+      .select('id,alias,text,created_at,edited_at,pinned')
       .eq('blog_id', blogId)
       .order('pinned', { ascending: false })
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(page * COMMENTS_PAGE_SIZE, page * COMMENTS_PAGE_SIZE + COMMENTS_PAGE_SIZE - 1);
 
     if (commentError) {
       setCommentsError('Unable to load comments right now.');
-      setComments([]);
+      if (!append) {
+        setComments([]);
+      }
       setLoadingComments(false);
+      setLoadingMoreComments(false);
       return;
     }
 
     const typedComments = (commentRows ?? []) as BlogComment[];
     if (typedComments.length === 0) {
-      setComments([]);
+      if (!append) {
+        setComments([]);
+      }
+      setHasMoreComments(false);
+      setCurrentCommentsPage(page);
       setLoadingComments(false);
+      setLoadingMoreComments(false);
       return;
     }
 
@@ -179,13 +200,22 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
       repliesByComment.set(reply.comment_id, current);
     });
 
-    setComments(
-      typedComments.map((comment) => ({
-        ...comment,
-        replies: repliesByComment.get(comment.id) ?? [],
-      })),
-    );
+    const nextComments = typedComments.map((comment) => ({
+      ...comment,
+      replies: repliesByComment.get(comment.id) ?? [],
+    }));
+
+    setComments((prev) => {
+      if (!append) {
+        return nextComments;
+      }
+      const existingIds = new Set(prev.map((item) => item.id));
+      return [...prev, ...nextComments.filter((item) => !existingIds.has(item.id))];
+    });
+    setHasMoreComments(typedComments.length === COMMENTS_PAGE_SIZE);
+    setCurrentCommentsPage(page);
     setLoadingComments(false);
+    setLoadingMoreComments(false);
   };
 
   useEffect(() => {
@@ -294,6 +324,24 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
       return;
     }
 
+    const now = Date.now();
+    try {
+      const lastRaw = localStorage.getItem(COMMENT_RATE_LIMIT_KEY);
+      const lastTimestamp = lastRaw ? parseInt(lastRaw, 10) : 0;
+      if (
+        Number.isNaN(lastTimestamp) ||
+        lastTimestamp < 0 ||
+        lastTimestamp > now + COMMENT_RATE_LIMIT_FUTURE_SKEW_MS
+      ) {
+        localStorage.removeItem(COMMENT_RATE_LIMIT_KEY);
+      } else if (lastTimestamp > 0 && now - lastTimestamp < COMMENT_RATE_LIMIT_MS) {
+        setCommentNotice('Please wait before commenting again.');
+        return;
+      }
+    } catch {
+      // Ignore storage access errors and continue.
+    }
+
     const { error } = await supabase.from('blog_comments').insert({
       blog_id: blogId,
       alias: finalAlias,
@@ -306,6 +354,13 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
       return;
     }
 
+    try {
+      localStorage.setItem(COMMENT_RATE_LIMIT_KEY, String(now));
+    } catch {
+      // Ignore storage access errors silently.
+    }
+
+    setCommentNotice(null);
     setCommentText('');
     setExpanded(true);
     void loadComments();
@@ -496,13 +551,19 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
           <form className="space-y-2" onSubmit={handleCommentSubmit}>
             <textarea
               value={commentText}
-              onChange={(event) => setCommentText(event.target.value)}
+              onChange={(event) => {
+                setCommentText(event.target.value);
+                if (commentNotice) {
+                  setCommentNotice(null);
+                }
+              }}
               placeholder="Write a comment"
               className="w-full min-h-24 border border-ink/20 bg-transparent px-3 py-2 text-sm text-ink outline-none"
             />
             <button type="submit" className="border border-ink/20 px-3 py-2 text-xs uppercase tracking-wide text-ink">
               Post Comment
             </button>
+            {commentNotice && <p className="text-xs text-ink-muted">{commentNotice}</p>}
           </form>
 
           {loadingComments && <p className="text-xs text-ink-muted">Loading comments…</p>}
@@ -522,6 +583,7 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
                     </span>
                   )}
                   <span className="text-xs text-ink-muted">{formatTimestamp(comment.created_at)}</span>
+                  {comment.edited_at && <span className="text-xs text-ink-muted">edited</span>}
                   <div className="ml-auto flex items-center gap-2">
                     <div ref={openMenuCommentId === comment.id ? menuRef : null} className="relative">
                       <button
@@ -761,6 +823,22 @@ export default function BlogInteractions({ blogId, isAdminSession, adminAvatarUr
               </div>
             ))}
           </div>
+          {!loadingComments && comments.length > 0 && (
+            <div className="pt-1">
+              {hasMoreComments ? (
+                <button
+                  type="button"
+                  onClick={() => void loadComments(currentCommentsPage + 1, true)}
+                  disabled={loadingMoreComments}
+                  className="border border-ink/20 px-3 py-1.5 text-xs uppercase tracking-wide text-ink disabled:opacity-60"
+                >
+                  {loadingMoreComments ? 'Loading…' : 'Load more'}
+                </button>
+              ) : (
+                <p className="text-xs text-ink-muted">No more comments</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

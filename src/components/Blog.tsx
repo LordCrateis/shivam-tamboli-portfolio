@@ -39,6 +39,7 @@ const DEFAULT_BLOG_CATEGORIES = ['General', 'Engineering', 'Machine Learning', '
 const CUSTOM_CATEGORY_VALUE = '__custom__';
 const PG_UNDEFINED_TABLE_ERROR_CODE = '42P01';
 const SEARCH_ICON_URL = 'https://cdn.jsdelivr.net/npm/lucide-static@0.468.0/icons/search.svg';
+const UNREAD_REPORTS_POLL_INTERVAL_MS = 60_000;
 
 const EMPTY_EDITOR: EditorState = {
   id: null,
@@ -225,6 +226,7 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<string[]>(DEFAULT_BLOG_CATEGORIES);
   const [searchQuery, setSearchQuery] = useState('');
+  const [unreadReportsCount, setUnreadReportsCount] = useState(0);
   const normalizedBlogSearch = searchQuery.trim().toLowerCase();
   const filteredPosts = useMemo(() => {
     if (!normalizedBlogSearch) {
@@ -389,6 +391,35 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
 
     void load();
   }, [route, activeMode, isAdminSession]);
+
+  useEffect(() => {
+    const loadUnreadReportsCount = async () => {
+      if (!isAdminSession) {
+        setUnreadReportsCount(0);
+        return;
+      }
+
+      const { count, error } = await supabase
+        .from('blog_comment_reports')
+        .select('id', { count: 'exact', head: true });
+
+      if (error) {
+        return;
+      }
+
+      setUnreadReportsCount(count ?? 0);
+    };
+
+    void loadUnreadReportsCount();
+
+    const intervalId = window.setInterval(() => {
+      void loadUnreadReportsCount();
+    }, UNREAD_REPORTS_POLL_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isAdminSession]);
 
   const openNewEditor = () => {
     setEditor(EMPTY_EDITOR);
@@ -615,6 +646,11 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
                     data-cursor="pointer"
                   >
                     Reports
+                    {unreadReportsCount > 0 && (
+                      <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[#2a9d8f] px-1.5 py-0.5 text-[10px] text-cream">
+                        {unreadReportsCount}
+                      </span>
+                    )}
                   </a>
                   <button
                     onClick={openNewEditor}
