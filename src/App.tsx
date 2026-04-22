@@ -14,7 +14,7 @@ import Blog from './components/Blog';
 import BlogReports from './components/BlogReports';
 import { supabase } from './lib/supabase';
 import { getAdminAvatarUrl, isAdminEmail } from './lib/admin';
-console.log(import.meta.env);
+
 type AppPage = 'home' | 'blog' | 'admin' | 'reports';
 const ADMIN_OAUTH_REDIRECT_HASH = '/';
 // 'admin' is an ephemeral OAuth trigger state for the secret route, not a rendered page.
