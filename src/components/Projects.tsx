@@ -1,9 +1,10 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
 import FadeUp from './FadeUp';
 import ProjectRatings from './ProjectRatings';
 import { supabase } from '../lib/supabase';
+import ProjectMedia from './ProjectMedia';
 
 interface ProjectRecord {
   id: string;
@@ -49,6 +50,26 @@ const EMPTY_EDITOR: ProjectEditorState = {
 };
 const SEARCH_ICON_URL = 'https://cdn.jsdelivr.net/npm/lucide-static@0.468.0/icons/search.svg';
 
+const PROJECTS_PER_PAGE = 3;
+
+function buildPageList(current: number, total: number): Array<number | 'ellipsis'> {
+  const pages: Array<number | 'ellipsis'> = [];
+  const delta = 1;
+
+  for (let i = 1; i <= total; i += 1) {
+    const isEdge = i === 1 || i === total;
+    const isNearCurrent = i >= current - delta && i <= current + delta;
+
+    if (isEdge || isNearCurrent) {
+      pages.push(i);
+    } else if (pages[pages.length - 1] !== 'ellipsis') {
+      pages.push('ellipsis');
+    }
+  }
+
+  return pages;
+}
+
 function normalizeCategory(category: string | null | undefined): string {
   return category?.trim() || DEFAULT_PROJECT_CATEGORY;
 }
@@ -66,6 +87,7 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
   const [editor, setEditor] = useState<ProjectEditorState>(EMPTY_EDITOR);
   const [saving, setSaving] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const categoryOptions = useMemo(() => {
     const options = new Set<string>([DEFAULT_PROJECT_CATEGORY]);
@@ -99,6 +121,23 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
       return searchable.includes(normalizedProjectSearch);
     });
   }, [projects, normalizedProjectSearch]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProjects.length / PROJECTS_PER_PAGE));
+
+useEffect(() => {
+  setPage((current) => Math.min(Math.max(1, current), totalPages));
+}, [totalPages]);
+
+useEffect(() => {
+  setPage(1);
+}, [normalizedProjectSearch]);
+
+const paginatedProjects = useMemo(() => {
+  const start = (page - 1) * PROJECTS_PER_PAGE;
+  return filteredProjects.slice(start, start + PROJECTS_PER_PAGE);
+}, [filteredProjects, page]);
+
+const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPages]);
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -416,9 +455,10 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
       {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
 
       <div className="divide-y divide-ink/10 border-t border-ink/10">
-        {filteredProjects.map((project, i) => {
-          const techTags = project.tech_stack ?? [];
-          const canOpenProject = Boolean(project.live_url);
+        {paginatedProjects.map((project, i) => {
+  const techTags = project.tech_stack ?? [];
+  const canOpenProject = Boolean(project.live_url);
+  const displayIndex = (page - 1) * PROJECTS_PER_PAGE + i + 1;
 
           return (
             <motion.div
@@ -460,7 +500,7 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
                 />
 
                 <span className="terminal-text text-xs text-ink-muted w-8 mt-1 shrink-0 relative z-20">
-                  {String(project.order_index ?? i + 1).padStart(2, '0')}
+                  {String(displayIndex).padStart(2, '0')}
                 </span>
 
                 <div className="flex-1 min-w-0 relative z-20">
@@ -490,6 +530,8 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
                   </div>
 
                   <ProjectRatings projectId={project.id} />
+
+<ProjectMedia projectId={project.id} isAdminSession={isAdminSession} isHovered={hovered === i} />
 
                   {isAdminSession && (
                     <div className="flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>
@@ -544,6 +586,54 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
           );
         })}
       </div>
+
+      {!loading && !error && filteredProjects.length > 0 && totalPages > 1 && (
+  <div className="mt-10 flex flex-wrap items-center justify-end gap-2">
+    <button
+      type="button"
+      onClick={() => setPage((p) => Math.max(1, p - 1))}
+      disabled={page === 1}
+      className="terminal-text inline-flex items-center gap-1 border border-ink/20 px-3 py-1.5 text-xs uppercase tracking-wide text-ink-muted disabled:opacity-40"
+      data-cursor="pointer"
+    >
+      <ChevronLeft size={12} />
+      Previous
+    </button>
+
+    {pageList.map((p, idx) =>
+      p === 'ellipsis' ? (
+        <span key={`ellipsis-${idx}`} className="terminal-text px-1 text-xs text-ink-muted">
+          …
+        </span>
+      ) : (
+        <button
+          key={p}
+          type="button"
+          onClick={() => setPage(p)}
+          className={`terminal-text px-3 py-1.5 text-xs uppercase tracking-wide ${
+            p === page
+              ? 'bg-ink text-cream'
+              : 'border border-ink/20 text-ink-muted'
+          }`}
+          data-cursor="pointer"
+        >
+          {p}
+        </button>
+      )
+    )}
+
+    <button
+      type="button"
+      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+      disabled={page === totalPages}
+      className="terminal-text inline-flex items-center gap-1 border border-ink/20 px-3 py-1.5 text-xs uppercase tracking-wide text-ink-muted disabled:opacity-40"
+      data-cursor="pointer"
+    >
+      Next
+      <ChevronRight size={12} />
+    </button>
+  </div>
+)}
       {!loading && !error && filteredProjects.length === 0 && (
         <p className="mt-4 text-sm text-ink-muted">
           {normalizedProjectSearch ? 'No projects match this search.' : 'No projects available.'}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 const NAV_LINKS = [
   { label: 'About', href: '#about' },
@@ -123,6 +124,8 @@ export default function Nav({
         </div>
 
         <div className="flex items-center gap-3">
+          <ThemeToggle />
+
           <a
             href="mailto:shivamrtamboli62@gmail.com"
             className="hidden md:inline-block font-sans text-xs bg-ink text-cream px-4 py-2 hover:bg-ink-light transition-colors duration-200 tracking-wide"
@@ -183,14 +186,18 @@ export default function Nav({
                     {link.label}
                   </a>
                 ))}
-                <a
-                  href="mailto:shivamrtamboli62@gmail.com"
-                  className="font-sans text-xs bg-ink text-cream px-4 py-2 hover:bg-ink-light transition-colors duration-200 tracking-wide w-fit"
-                  onClick={() => setIsMenuOpen(false)}
-                  data-cursor="pointer"
-                >
-                  Get in Touch
-                </a>
+                <div className="flex items-center gap-3 pt-2">
+                  <ThemeToggle />
+
+                  <a
+                    href="mailto:shivamrtamboli62@gmail.com"
+                    className="font-sans text-xs bg-ink text-cream px-4 py-2 hover:bg-ink-light transition-colors duration-200 tracking-wide w-fit"
+                    onClick={() => setIsMenuOpen(false)}
+                    data-cursor="pointer"
+                  >
+                    Get in Touch
+                  </a>
+                </div>
               </div>
             </motion.aside>
           </>

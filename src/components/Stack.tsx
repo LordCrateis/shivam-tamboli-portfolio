@@ -28,7 +28,7 @@ export default function Stack() {
     <section
       ref={ref}
       id="stack"
-      className="py-28 px-6 md:px-12 lg:px-16 bg-ink"
+      className="py-28 px-6 md:px-12 lg:px-16 bg-obsidian"
     >
       <motion.p
         className="terminal-text text-xs text-white/30 tracking-widest uppercase mb-12"
@@ -40,7 +40,7 @@ export default function Stack() {
       </motion.p>
 
       <motion.h2
-        className="font-serif text-cream leading-tight mb-20"
+        className="font-serif text-paper leading-tight mb-20"
         style={{ fontSize: 'clamp(2rem, 4vw, 3.2rem)' }}
         initial={{ opacity: 0, y: 24 }}
         animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
@@ -65,12 +65,12 @@ export default function Stack() {
               {cat.items.map((item, ii) => (
                 <motion.li
                   key={item}
-                  className="font-sans text-cream/80 text-sm flex items-center gap-2 group"
+                  className="font-sans text-paper/80 text-sm flex items-center gap-2 group"
                   initial={{ opacity: 0, x: -8 }}
                   animate={inView ? { opacity: 1, x: 0 } : { opacity: 0, x: -8 }}
                   transition={{ duration: 0.4, delay: 0.25 + ci * 0.06 + ii * 0.035 }}
                 >
-                  <span className="w-1 h-1 rounded-full bg-white/20 group-hover:bg-cream transition-colors duration-200 shrink-0" />
+                  <span className="w-1 h-1 rounded-full bg-white/20 group-hover:bg-paper transition-colors duration-200 shrink-0" />
                   {item}
                 </motion.li>
               ))}

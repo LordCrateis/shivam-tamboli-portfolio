@@ -117,8 +117,8 @@ export default function ProjectRatings({ projectId }: ProjectRatingsProps) {
     void loadRatingEligibility();
 
     const channel = supabase
-      .channel(`project-ratings-${projectId}`)
-      .on(
+  .channel(`project-ratings-${projectId}-${crypto.randomUUID()}`)
+  .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'project_ratings', filter: `project_uuid=eq.${projectId}` },
         () => {

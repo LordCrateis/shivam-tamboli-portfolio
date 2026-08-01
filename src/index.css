@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-bg: 234 232 223;
+  --color-fg: 17 17 17;
+  --color-fg-light: 51 51 51;
+  --color-fg-muted: 136 136 136;
+}
+
+.dark {
+  --color-bg: 28 26 22;
+  --color-fg: 232 227 214;
+  --color-fg-light: 211 205 188;
+  --color-fg-muted: 158 149 133;
+}
+
 @layer components {
   .blog-category-select {
     @apply w-full border border-ink/20 bg-transparent px-4 py-3 pr-10 text-sm text-ink outline-none appearance-none font-sans rounded-none focus-visible:ring-2 focus-visible:ring-ink/35 focus-visible:ring-offset-1 focus-visible:ring-offset-cream;
@@ -13,10 +27,11 @@ html {
 }
 
 body {
-  background-color: #EAE8DF;
-  color: #111111;
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--color-fg));
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   overflow-x: hidden;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
 .grain-overlay {
@@ -93,10 +108,23 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #EAE8DF;
+  background: rgb(var(--color-bg));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888888;
+  background: rgb(var(--color-fg-muted));
   border-radius: 2px;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.vds-video-layout {
+  --media-brand: #ffffff;
+  --media-focus-ring-color: #ffffff;
 }

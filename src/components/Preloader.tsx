@@ -18,6 +18,9 @@ const ML_PHRASES = [
   'softmax activation...',
   'cross-entropy loss...',
   'model checkpoint saved',
+  'I am God of ML',
+  'I am God of ML',
+  'I am God of ML',
   'validation accuracy: 94.2%',
   'convergence achieved.',
 ];
@@ -70,13 +73,13 @@ export default function Preloader({ onComplete }: PreloaderProps) {
       {!done && (
         <motion.div
           key="preloader"
-          className="fixed inset-0 z-[9998] bg-ink flex flex-col items-center justify-center"
+          className="fixed inset-0 z-[9998] bg-obsidian flex flex-col items-center justify-center"
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: 'easeInOut' }}
         >
           <div className="w-full max-w-2xl px-8">
             <div className="mb-8">
-              <p className="terminal-text text-xs text-ink-muted tracking-widest uppercase mb-2">
+              <p className="terminal-text text-xs text-obsidian-muted tracking-widest uppercase mb-2">
                 $ run shivam_portfolio.py
               </p>
               <p className="terminal-text text-sm text-green-400 min-h-[1.5rem]">
@@ -86,9 +89,9 @@ export default function Preloader({ onComplete }: PreloaderProps) {
             </div>
 
             <div className="relative mb-4">
-              <div className="h-px bg-ink-light w-full">
+              <div className="h-px bg-obsidian-light w-full">
                 <motion.div
-                  className="h-px bg-cream absolute top-0 left-0"
+                  className="h-px bg-paper absolute top-0 left-0"
                   style={{ width: `${count}%` }}
                   transition={{ ease: 'linear' }}
                 />
@@ -96,11 +99,11 @@ export default function Preloader({ onComplete }: PreloaderProps) {
             </div>
 
             <div className="flex items-end justify-between">
-              <p className="terminal-text text-xs text-ink-muted tracking-widest">
+              <p className="terminal-text text-xs text-obsidian-muted tracking-widest">
                 LOADING PORTFOLIO
               </p>
               <p
-                className="font-serif text-cream leading-none"
+                className="font-serif text-paper leading-none"
                 style={{ fontSize: 'clamp(4rem, 12vw, 9rem)' }}
               >
                 {padded}
