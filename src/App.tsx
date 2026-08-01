@@ -11,11 +11,12 @@ import Projects from './components/Projects';
 import Stack from './components/Stack';
 import Contact from './components/Contact';
 import Blog from './components/Blog';
+import Profile from './components/Profile';
 import BlogReports from './components/BlogReports';
 import { supabase } from './lib/supabase';
 import { getAdminAvatarUrl, isAdminEmail } from './lib/admin';
 
-type AppPage = 'home' | 'blog' | 'admin' | 'reports';
+type AppPage = 'home' | 'blog' | 'admin' | 'reports' | 'profile';
 const ADMIN_OAUTH_REDIRECT_HASH = '/';
 // 'admin' is an ephemeral OAuth trigger state for the secret route, not a rendered page.
 
@@ -27,6 +28,9 @@ function getCurrentPage(): AppPage {
   }
   if (window.location.hash.startsWith(`#/${ADMIN_ROUTE}`)) {
     return 'admin';
+  }
+  if (window.location.hash.startsWith('#/profile')) {
+    return 'profile';
   }
   return window.location.hash.startsWith('#/blog') ? 'blog' : 'home';
 }
@@ -101,6 +105,10 @@ export default function App() {
     });
   }, [page, isAdminSession]);
 
+  const handleLogout = () => {
+    void supabase.auth.signOut();
+  };
+
   useEffect(() => {
     if (isAdminSession && page === 'admin') {
       window.location.hash = '/blog';
@@ -122,12 +130,19 @@ export default function App() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
-            <Nav isBlogPage={page === 'blog' || page === 'reports'} isAdminSession={isAdminSession} adminAvatarUrl={adminAvatarUrl} />
+            <Nav
+              isBlogPage={page === 'blog' || page === 'reports' || page === 'profile'}
+              isAdminSession={isAdminSession}
+              adminAvatarUrl={adminAvatarUrl}
+              onLogout={handleLogout}
+            />
             <main className="bg-cream min-h-screen">
               {page === 'blog' ? (
                 <Blog isAdminSession={isAdminSession} adminAvatarUrl={adminAvatarUrl} />
               ) : page === 'reports' ? (
                 <BlogReports isAdminSession={isAdminSession} />
+              ) : page === 'profile' ? (
+                <Profile isAdminSession={isAdminSession} />
               ) : (
                 <>
                   <Hero />

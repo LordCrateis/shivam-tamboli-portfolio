@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { label: 'Work', href: '#work' },
   { label: 'Stack', href: '#stack' },
   { label: 'Contact', href: '#contact' },
+  { label: 'Profile', href: '#/profile' },
   { label: 'Blog', href: '#/blog' },
 ];
 
@@ -20,13 +21,21 @@ interface NavProps {
   isBlogPage?: boolean;
   isAdminSession?: boolean;
   adminAvatarUrl?: string | null;
+  onLogout?: () => void;
 }
 
 export default function Nav({
   isBlogPage = false,
   isAdminSession = false,
   adminAvatarUrl = null,
+  onLogout,
 }: NavProps) {
+  const [showFlyBubble, setShowFlyBubble] = useState(false);
+
+  const handleAvatarClick = () => {
+    setShowFlyBubble(true);
+    setTimeout(() => setShowFlyBubble(false), 1800);
+  };
   const { scrollY } = useScroll();
   const borderOpacity = useTransform(scrollY, [0, 80], [0, 0.12]);
   const borderColor = useTransform(borderOpacity, (v) => `rgba(17,17,17,${v})`);
@@ -91,24 +100,65 @@ export default function Nav({
         className="fixed top-0 left-0 right-0 z-[60] flex items-center justify-between px-6 md:px-12 lg:px-16 py-4 bg-cream/90 backdrop-blur-sm border-b"
         style={{ borderBottomColor: borderColor }}
       >
-        <motion.a
-          href="#"
-          className="font-serif text-ink text-lg tracking-tight"
-          data-cursor="pointer"
-          whileHover={{ opacity: 0.6 }}
-          transition={{ duration: 0.2 }}
-        >
-          {isAdminSession && adminAvatarUrl ? (
-            <img
-              src={adminAvatarUrl}
-              alt="Admin avatar"
-              className="h-8 w-8 rounded-full border border-ink/20 object-cover"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            'ST'
-          )}
-        </motion.a>
+        {isAdminSession && adminAvatarUrl ? (
+          <div className="relative">
+            <motion.button
+              type="button"
+              onClick={handleAvatarClick}
+              className="block"
+              data-cursor="pointer"
+              whileHover={{ opacity: 0.85 }}
+              whileTap={{ scale: 0.92 }}
+              transition={{ duration: 0.2 }}
+              aria-label="Admin avatar"
+            >
+              <img
+                src={adminAvatarUrl}
+                alt="Admin avatar"
+                className="h-8 w-8 rounded-full border border-ink/20 object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </motion.button>
+
+            <AnimatePresence>
+              {showFlyBubble && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.9 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  style={{ transformOrigin: 'top center' }}
+                  className="absolute left-1/2 top-full z-10 mt-2 -translate-x-1/2"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowFlyBubble(false);
+                      onLogout?.();
+                    }}
+                    className="relative whitespace-nowrap rounded-2xl border border-ink/15 bg-cream px-4 py-2 font-serif text-base text-ink shadow-md hover:bg-ink hover:text-cream transition-colors duration-150"
+                    data-cursor="pointer"
+                  >
+                    Fly
+                    <span className="absolute -top-1.5 left-1/2 h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-l border-t border-ink/15 bg-cream" />
+                  </button>
+                  <span className="absolute -top-3 left-[calc(50%-10px)] h-1.5 w-1.5 rounded-full bg-cream border border-ink/15" />
+                  <span className="absolute -top-5 left-[calc(50%-16px)] h-1 w-1 rounded-full bg-cream border border-ink/15" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <motion.a
+            href="#"
+            className="font-serif text-ink text-lg tracking-tight"
+            data-cursor="pointer"
+            whileHover={{ opacity: 0.6 }}
+            transition={{ duration: 0.2 }}
+          >
+            ST
+          </motion.a>
+        )}
 
         <div className="hidden md:flex items-center gap-8">
           {links.map((link) => (
