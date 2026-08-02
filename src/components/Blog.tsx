@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpRight, ChevronDown, LogOut, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, LogOut, Pencil, Plus, Trash2 } from 'lucide-react';
 import FadeUp from './FadeUp';
 import BlogInteractions from './BlogInteractions';
 import { supabase } from '../lib/supabase';
@@ -40,6 +40,25 @@ const CUSTOM_CATEGORY_VALUE = '__custom__';
 const PG_UNDEFINED_TABLE_ERROR_CODE = '42P01';
 const SEARCH_ICON_URL = 'https://cdn.jsdelivr.net/npm/lucide-static@0.468.0/icons/search.svg';
 const UNREAD_REPORTS_POLL_INTERVAL_MS = 60_000;
+const BLOGS_PER_PAGE = 5;
+
+function buildPageList(current: number, total: number): Array<number | 'ellipsis'> {
+  const pages: Array<number | 'ellipsis'> = [];
+  const delta = 1;
+
+  for (let i = 1; i <= total; i += 1) {
+    const isEdge = i === 1 || i === total;
+    const isNearCurrent = i >= current - delta && i <= current + delta;
+
+    if (isEdge || isNearCurrent) {
+      pages.push(i);
+    } else if (pages[pages.length - 1] !== 'ellipsis') {
+      pages.push('ellipsis');
+    }
+  }
+
+  return pages;
+}
 
 const EMPTY_EDITOR: EditorState = {
   id: null,
@@ -102,10 +121,10 @@ function formatDate(date: string | null | undefined): string {
     return '';
   }
 
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    year: 'numeric',
-  }).format(new Date(date));
+  const d = new Date(date);
+  const day = d.getDate();
+  const month = d.toLocaleString('en-US', { month: 'short' });
+  return `${day}, ${month}, ${d.getFullYear()}`;
 }
 
 function stripHtml(html: string): string {
@@ -227,6 +246,7 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
   const [categoryOptions, setCategoryOptions] = useState<string[]>(DEFAULT_BLOG_CATEGORIES);
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadReportsCount, setUnreadReportsCount] = useState(0);
+  const [page, setPage] = useState(1);
   const normalizedBlogSearch = searchQuery.trim().toLowerCase();
   const filteredPosts = useMemo(() => {
     if (!normalizedBlogSearch) {
@@ -246,6 +266,23 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
       return searchable.includes(normalizedBlogSearch);
     });
   }, [posts, normalizedBlogSearch]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredPosts.length / BLOGS_PER_PAGE));
+
+  useEffect(() => {
+    setPage((current) => Math.min(Math.max(1, current), totalPages));
+  }, [totalPages]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [normalizedBlogSearch]);
+
+  const paginatedPosts = useMemo(() => {
+    const start = (page - 1) * BLOGS_PER_PAGE;
+    return filteredPosts.slice(start, start + BLOGS_PER_PAGE);
+  }, [filteredPosts, page]);
+
+  const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPages]);
 
   const saveEditorSelection = () => {
     const editorElement = contentRef.current;
@@ -861,12 +898,12 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
           )}
 
           <div className="border-t border-ink/10 divide-y divide-ink/10">
-            {filteredPosts.map((post, idx) => (
+            {paginatedPosts.map((post, idx) => (
               <FadeUp key={post.id} delay={0.18 + idx * 0.04}>
                 <article className="py-8">
                   <div className="flex flex-col lg:flex-row lg:items-start gap-5 lg:gap-8">
                     <p className="terminal-text text-xs text-ink-muted shrink-0 w-8 mt-1">
-                      {String(idx + 1).padStart(2, '0')}
+                      {String((page - 1) * BLOGS_PER_PAGE + idx + 1).padStart(2, '0')}
                     </p>
 
                     <div className="flex-1">
@@ -957,6 +994,52 @@ export default function Blog({ isAdminSession, adminAvatarUrl }: BlogProps) {
               </FadeUp>
             ))}
           </div>
+
+          {!loading && !blogError && filteredPosts.length > 0 && totalPages > 1 && (
+            <div className="mt-10 flex flex-wrap items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="terminal-text inline-flex items-center gap-1 border border-ink/20 px-3 py-1.5 text-xs uppercase tracking-wide text-ink-muted disabled:opacity-40"
+                data-cursor="pointer"
+              >
+                <ChevronLeft size={12} />
+                Previous
+              </button>
+
+              {pageList.map((p, idx) =>
+                p === 'ellipsis' ? (
+                  <span key={`ellipsis-${idx}`} className="terminal-text px-1 text-xs text-ink-muted">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPage(p)}
+                    className={`terminal-text px-3 py-1.5 text-xs uppercase tracking-wide ${
+                      p === page ? 'bg-ink text-cream' : 'border border-ink/20 text-ink-muted'
+                    }`}
+                    data-cursor="pointer"
+                  >
+                    {p}
+                  </button>
+                ),
+              )}
+
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="terminal-text inline-flex items-center gap-1 border border-ink/20 px-3 py-1.5 text-xs uppercase tracking-wide text-ink-muted disabled:opacity-40"
+                data-cursor="pointer"
+              >
+                Next
+                <ChevronRight size={12} />
+              </button>
+            </div>
+          )}
         </>
       )}
 

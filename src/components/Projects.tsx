@@ -11,6 +11,7 @@ interface ProjectRecord {
   title: string;
   category: string | null;
   year: number | null;
+  project_date: string | null;
   description: string | null;
   tech_stack: string[] | null;
   live_url: string | null;
@@ -24,6 +25,7 @@ interface ProjectEditorState {
   title: string;
   category: string;
   year: string;
+  projectDate: string;
   description: string;
   techStackInput: string;
   liveUrl: string;
@@ -43,6 +45,7 @@ const EMPTY_EDITOR: ProjectEditorState = {
   title: '',
   category: DEFAULT_PROJECT_CATEGORY,
   year: '',
+  projectDate: '',
   description: '',
   techStackInput: '',
   liveUrl: '',
@@ -72,6 +75,16 @@ function buildPageList(current: number, total: number): Array<number | 'ellipsis
 
 function normalizeCategory(category: string | null | undefined): string {
   return category?.trim() || DEFAULT_PROJECT_CATEGORY;
+}
+
+function formatProjectDate(dateStr: string | null, year: number | null): string {
+  if (dateStr) {
+    const d = new Date(`${dateStr}T00:00:00`);
+    const day = d.getDate();
+    const month = d.toLocaleString('en-US', { month: 'short' });
+    return `${day}, ${month}, ${d.getFullYear()}`;
+  }
+  return year ? String(year) : '—';
 }
 
 interface ProjectsProps {
@@ -145,7 +158,7 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
 
     let query = supabase
       .from('projects')
-      .select('id,title,category,year,description,tech_stack,live_url,status,order_index,visible')
+      .select('id,title,category,year,project_date,description,tech_stack,live_url,status,order_index,visible')
       .order('order_index', { ascending: true })
       .order('year', { ascending: false });
 
@@ -174,6 +187,7 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
       title: project.title,
       category: normalizeCategory(project.category),
       year: project.year ? String(project.year) : '',
+      projectDate: project.project_date ?? '',
       description: project.description ?? '',
       techStackInput: (project.tech_stack ?? []).join(', '),
       liveUrl: project.live_url ?? '',
@@ -221,6 +235,7 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
       title: editor.title.trim(),
       category: normalizeCategory(editor.category),
       year: parsedYear,
+      project_date: editor.projectDate.trim() || null,
       description: editor.description.trim(),
       tech_stack: techStack,
       live_url: editor.liveUrl.trim() || null,
@@ -382,7 +397,13 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
                   type="number"
                   value={editor.year}
                   onChange={(event) => setEditor((prev) => ({ ...prev, year: event.target.value }))}
-                  placeholder="Year"
+                  placeholder="Year (fallback if no exact date)"
+                  className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
+                />
+                <input
+                  type="date"
+                  value={editor.projectDate}
+                  onChange={(event) => setEditor((prev) => ({ ...prev, projectDate: event.target.value }))}
                   className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
                 />
                 <select
@@ -507,7 +528,9 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
                   <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
                     <h3 className="font-serif text-ink text-2xl md:text-3xl">{project.title}</h3>
                     <div className="flex items-center gap-4 shrink-0">
-                      <span className="terminal-text text-xs text-ink-muted">{project.year ?? '—'}</span>
+                      <span className="terminal-text text-xs text-ink-muted">
+                        {formatProjectDate(project.project_date, project.year)}
+                      </span>
                       <span className="terminal-text text-xs border border-ink/20 px-2 py-0.5 text-ink-muted">
                         {project.status ?? 'In Progress'}
                       </span>

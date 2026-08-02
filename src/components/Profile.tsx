@@ -431,12 +431,12 @@ export default function Profile({ isAdminSession }: ProfileProps) {
               {profile?.photo_url && (
                 <div className="relative shrink-0">
                   {profile.thought_text && (
-                    <div className="absolute right-full top-4 mr-4 hidden sm:block">
-                      <div className="relative whitespace-nowrap rounded-2xl border border-ink/15 bg-cream px-4 py-2 font-serif text-base text-ink shadow-md">
+                    <div className="absolute z-10 left-1/2 -translate-x-1/2 bottom-full mb-3 sm:left-auto sm:translate-x-0 sm:right-full sm:bottom-auto sm:top-4 sm:mb-0 sm:mr-4">
+                      <div className="relative max-w-[70vw] sm:max-w-none whitespace-normal sm:whitespace-nowrap rounded-2xl border border-ink/15 bg-cream px-4 py-2 font-sans text-sm text-ink shadow-md">
                         {profile.thought_text}
                       </div>
-                      <span className="absolute top-full right-3 mt-2 h-2.5 w-2.5 rounded-full bg-cream border border-ink/15" />
-                      <span className="absolute top-full right-0 mt-4 h-1.5 w-1.5 rounded-full bg-cream border border-ink/15" />
+                      <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 h-2.5 w-2.5 rounded-full bg-cream border border-ink/15 sm:left-auto sm:translate-x-0 sm:right-3" />
+                      <span className="absolute left-[calc(50%+8px)] top-full mt-4 h-1.5 w-1.5 rounded-full bg-cream border border-ink/15 sm:left-auto sm:right-0" />
                     </div>
                   )}
                   <img

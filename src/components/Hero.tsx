@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import SACEntity from './SACEntity';
 
 const META = [
   { label: 'Role', value: 'ML Engineer' },
@@ -10,6 +11,9 @@ const META = [
 export default function Hero() {
   return (
     <section className="min-h-screen flex flex-col justify-between pt-16 pb-0 px-6 md:px-12 lg:px-16 relative">
+      <SACEntity />
+
+      <div className="relative z-10 flex flex-1 flex-col justify-between">
       <motion.div
         className="flex items-start justify-between pt-4"
         initial={{ opacity: 0 }}
@@ -70,6 +74,7 @@ export default function Hero() {
           ))}
         </div>
       </motion.div>
+      </div>
     </section>
   );
 }
