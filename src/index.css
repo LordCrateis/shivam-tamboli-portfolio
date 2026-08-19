@@ -1,0 +1,575 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: 234 232 223;
+  --color-fg: 17 17 17;
+  --color-fg-light: 51 51 51;
+  --color-fg-muted: 136 136 136;
+}
+
+.dark {
+  --color-bg: 28 26 22;
+  --color-fg: 232 227 214;
+  --color-fg-light: 211 205 188;
+  --color-fg-muted: 158 149 133;
+}
+
+@layer components {
+  .blog-category-select {
+    @apply w-full border border-ink/20 bg-transparent px-4 py-3 pr-10 text-sm text-ink outline-none appearance-none font-sans rounded-none focus-visible:ring-2 focus-visible:ring-ink/35 focus-visible:ring-offset-1 focus-visible:ring-offset-cream;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: rgb(var(--color-bg));
+  color: rgb(var(--color-fg));
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+.grain-overlay {
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+  animation: grain 8s steps(10) infinite;
+}
+
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-2%, -3%); }
+  20% { transform: translate(3%, 2%); }
+  30% { transform: translate(-1%, 4%); }
+  40% { transform: translate(2%, -2%); }
+  50% { transform: translate(-3%, 1%); }
+  60% { transform: translate(1%, 3%); }
+  70% { transform: translate(-2%, -1%); }
+  80% { transform: translate(3%, -3%); }
+  90% { transform: translate(-1%, 2%); }
+}
+
+.cursor-adaptive-tracker {
+  position: fixed;
+  left: -10px;
+  top: -10px;
+  width: 1px;
+  height: 1px;
+  border-radius: 9999px;
+  background: #ffffff;
+  mix-blend-mode: difference;
+  pointer-events: none;
+  z-index: 10000;
+  transform: translate(-50%, -50%);
+}
+
+.terminal-text {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+.editor-rich-content ul,
+.blog-rich-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+}
+
+.editor-rich-content ol,
+.blog-rich-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+}
+
+.editor-rich-content li,
+.blog-rich-content li {
+  margin: 0.25rem 0;
+}
+
+.blog-rich-content a {
+  overflow-wrap: break-word;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--color-bg));
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-fg-muted));
+  border-radius: 2px;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.vds-video-layout {
+  --media-brand: #ffffff;
+  --media-focus-ring-color: #ffffff;
+}
+
+
+/* Flamolina — a quiet, editorial chat layer for the portfolio */
+.flamolina-root {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+.flamolina-modal-positioner {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  pointer-events: auto;
+}
+
+.flamolina-modal-positioner.is-fullscreen {
+  padding: 0;
+  place-items: stretch;
+}
+
+.flamolina-modal-positioner.is-fullscreen .flamolina-panel {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.flamolina-backdrop {
+  z-index: 1;
+  border: 0;
+  padding: 0;
+  background: rgb(17 17 17 / 0.22);
+  backdrop-filter: blur(5px);
+}
+
+.flamolina-panel {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+  background: rgb(var(--color-bg));
+  border: 1px solid rgb(var(--color-fg) / 0.16);
+  box-shadow: 0 24px 80px rgb(17 17 17 / 0.18), 0 2px 10px rgb(17 17 17 / 0.08);
+  color: rgb(var(--color-fg));
+}
+
+.flamolina-header {
+  padding: 1.2rem 1.35rem 0.9rem;
+  border-bottom: 1px solid rgb(var(--color-fg) / 0.1);
+  background: linear-gradient(135deg, rgb(var(--color-bg)) 0%, rgb(var(--color-bg) / 0.86) 100%);
+}
+
+.flamolina-avatar,
+.flamolina-mini-avatar {
+  display: grid;
+  place-items: center;
+  color: rgb(var(--color-bg));
+  background: rgb(var(--color-fg));
+}
+
+.flamolina-avatar {
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px rgb(var(--color-fg) / 0.07);
+}
+
+.flamolina-mini-avatar {
+  width: 1.55rem;
+  height: 1.55rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  margin-top: 0.15rem;
+}
+
+.flamolina-avatar img,
+.flamolina-mini-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.flamolina-live-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: #6fbd70;
+  box-shadow: 0 0 0 3px rgb(111 189 112 / 0.16);
+}
+
+.flamolina-icon-button,
+.flamolina-input-action {
+  display: grid;
+  place-items: center;
+  color: rgb(var(--color-fg-muted));
+  transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.flamolina-icon-button {
+  width: 2rem;
+  height: 2rem;
+}
+
+.flamolina-icon-button:hover,
+.flamolina-input-action:hover {
+  color: rgb(var(--color-fg));
+  background: rgb(var(--color-fg) / 0.07);
+}
+
+.flamolina-icon-button:active,
+.flamolina-input-action:active,
+.flamolina-send-button:active {
+  transform: scale(0.96);
+}
+
+.flamolina-messages {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  background: radial-gradient(circle at 90% 0%, rgb(var(--color-fg) / 0.035), transparent 38%);
+}
+
+.flamolina-date-label {
+  position: relative;
+  display: inline-block;
+  padding: 0 0.75rem;
+  color: rgb(var(--color-fg-muted));
+  font-size: 0.58rem;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.flamolina-date-label::before,
+.flamolina-date-label::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 2.25rem;
+  height: 1px;
+  background: rgb(var(--color-fg) / 0.12);
+}
+
+.flamolina-date-label::before { right: 100%; }
+.flamolina-date-label::after { left: 100%; }
+
+.flamolina-message-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0 0 1.45rem;
+}
+
+.flamolina-message-row.is-user {
+  justify-content: flex-end;
+}
+
+.flamolina-bubble {
+  font-size: 0.78rem;
+  line-height: 1.7;
+}
+
+.assistant-bubble {
+  padding: 0.9rem 1rem;
+  border: 1px solid rgb(var(--color-fg) / 0.12);
+  background: rgb(var(--color-bg) / 0.7);
+  box-shadow: 0 5px 15px rgb(var(--color-fg) / 0.035);
+}
+
+.user-bubble {
+  padding: 0.75rem 0.95rem;
+  color: rgb(var(--color-bg));
+  background: rgb(var(--color-fg));
+}
+
+.flamolina-markdown {
+  color: rgb(var(--color-fg) / 0.88);
+  font-size: 0.8rem;
+  line-height: 1.75;
+  letter-spacing: -0.012em;
+}
+
+.flamolina-markdown > :first-child {
+  margin-top: 0;
+}
+
+.flamolina-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.flamolina-markdown p {
+  margin: 0.65rem 0;
+}
+
+.flamolina-markdown strong {
+  color: rgb(var(--color-fg));
+  font-weight: 700;
+}
+
+.flamolina-markdown em {
+  color: rgb(var(--color-fg));
+  font-family: 'Gloock', Georgia, serif;
+  letter-spacing: 0;
+}
+
+.flamolina-markdown h1,
+.flamolina-markdown h2,
+.flamolina-markdown h3 {
+  color: rgb(var(--color-fg));
+  font-family: 'Gloock', Georgia, serif;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.flamolina-markdown h1 {
+  margin: 1.1rem 0 0.45rem;
+  font-size: 1.45rem;
+}
+
+.flamolina-markdown h2 {
+  margin: 1rem 0 0.4rem;
+  font-size: 1.18rem;
+}
+
+.flamolina-markdown h3 {
+  margin: 0.9rem 0 0.35rem;
+  font-size: 1rem;
+}
+
+.flamolina-markdown ul,
+.flamolina-markdown ol {
+  margin: 0.7rem 0;
+  padding-left: 1.35rem;
+}
+
+.flamolina-markdown ul {
+  list-style: none;
+}
+
+.flamolina-markdown ul li {
+  position: relative;
+  padding-left: 0.35rem;
+}
+
+.flamolina-markdown ul li::before {
+  content: '—';
+  position: absolute;
+  right: 100%;
+  color: rgb(var(--color-fg) / 0.45);
+}
+
+.flamolina-markdown ol {
+  list-style: decimal;
+}
+
+.flamolina-markdown li {
+  margin: 0.28rem 0;
+  padding-left: 0.15rem;
+}
+
+.flamolina-markdown li > ul,
+.flamolina-markdown li > ol {
+  margin: 0.25rem 0;
+}
+
+.flamolina-markdown a {
+  color: rgb(var(--color-fg));
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--color-fg) / 0.32);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 160ms ease;
+}
+
+.flamolina-markdown a:hover {
+  text-decoration-color: rgb(var(--color-fg));
+}
+
+.flamolina-markdown blockquote {
+  margin: 0.9rem 0;
+  padding: 0.15rem 0 0.15rem 1rem;
+  border-left: 2px solid rgb(var(--color-fg) / 0.34);
+  color: rgb(var(--color-fg-light));
+  font-family: 'Gloock', Georgia, serif;
+  font-size: 0.93em;
+  line-height: 1.55;
+}
+
+.flamolina-markdown hr {
+  margin: 1.15rem 0;
+  border: 0;
+  border-top: 1px solid rgb(var(--color-fg) / 0.12);
+}
+
+.flamolina-markdown code {
+  padding: 0.14rem 0.34rem;
+  border: 1px solid rgb(var(--color-fg) / 0.13);
+  border-radius: 2px;
+  color: rgb(var(--color-fg));
+  background: rgb(var(--color-fg) / 0.045);
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 0.76em;
+  letter-spacing: -0.015em;
+}
+
+.flamolina-markdown pre {
+  position: relative;
+  overflow-x: auto;
+  margin: 1rem 0;
+  padding: 1.15rem 1.15rem 1.15rem 1.25rem;
+  border: 1px solid rgb(var(--color-fg) / 0.13);
+  border-left: 2px solid rgb(var(--color-fg) / 0.42);
+  border-radius: 2px;
+  color: rgb(var(--color-fg) / 0.9);
+  background: linear-gradient(
+    135deg,
+    rgb(var(--color-fg) / 0.045),
+    rgb(var(--color-fg) / 0.018)
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(var(--color-bg) / 0.7),
+    0 6px 18px rgb(var(--color-fg) / 0.025);
+}
+
+.flamolina-markdown pre::before {
+  content: 'code';
+  display: block;
+  margin-bottom: 0.7rem;
+  color: rgb(var(--color-fg) / 0.42);
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.flamolina-markdown pre code {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  background: transparent;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 0.73rem;
+  line-height: 1.75;
+  white-space: pre;
+}
+
+.flamolina-table-wrap {
+  overflow-x: auto;
+  margin: 0.95rem 0;
+  border: 1px solid rgb(var(--color-fg) / 0.13);
+}
+
+.flamolina-markdown table {
+  width: 100%;
+  min-width: 330px;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+}
+
+.flamolina-markdown th,
+.flamolina-markdown td {
+  padding: 0.62rem 0.7rem;
+  border-bottom: 1px solid rgb(var(--color-fg) / 0.1);
+  text-align: left;
+  vertical-align: top;
+}
+
+.flamolina-markdown th {
+  color: rgb(var(--color-fg) / 0.62);
+  background: rgb(var(--color-fg) / 0.035);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.flamolina-markdown tr:last-child td {
+  border-bottom: 0;
+}
+
+.flamolina-copy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  opacity: 0.7;
+  transition: opacity 160ms ease, color 160ms ease;
+}
+.flamolina-copy-button:hover { opacity: 1; color: rgb(var(--color-fg)); }
+
+.flamolina-composer {
+  padding: 0.75rem 1.1rem 0.9rem;
+  border-top: 1px solid rgb(var(--color-fg) / 0.1);
+  background: rgb(var(--color-bg));
+}
+
+.flamolina-suggestion {
+  flex: 0 0 auto;
+  border: 1px solid rgb(var(--color-fg) / 0.15);
+  padding: 0.45rem 0.65rem;
+  color: rgb(var(--color-fg-light));
+  font-size: 0.63rem;
+  white-space: nowrap;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+.flamolina-suggestion:hover { border-color: rgb(var(--color-fg) / 0.35); color: rgb(var(--color-fg)); background: rgb(var(--color-fg) / 0.05); }
+
+.flamolina-input-shell {
+  border: 1px solid rgb(var(--color-fg) / 0.22);
+  padding: 0.7rem 0.7rem 0.55rem 0.85rem;
+  background: rgb(var(--color-bg) / 0.55);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.flamolina-input-shell:focus-within { border-color: rgb(var(--color-fg) / 0.52); box-shadow: 0 0 0 3px rgb(var(--color-fg) / 0.06); }
+.flamolina-input-shell textarea { display: block; width: 100%; resize: none; min-height: 1.5rem; max-height: 7rem; border: 0; outline: 0; background: transparent; color: rgb(var(--color-fg)); font: inherit; font-size: 0.78rem; line-height: 1.45; }
+.flamolina-input-shell textarea::placeholder { color: rgb(var(--color-fg-muted)); }
+.flamolina-input-action { width: 1.65rem; height: 1.65rem; }
+.flamolina-send-button { display: grid; place-items: center; width: 2rem; height: 2rem; color: rgb(var(--color-bg)); background: rgb(var(--color-fg)); transition: opacity 160ms ease, transform 160ms ease; }
+.flamolina-send-button:disabled { cursor: not-allowed; opacity: 0.3; }
+
+.flamolina-thinking-mark { display: inline-flex; gap: 0.2rem; align-items: flex-end; height: 0.75rem; }
+.flamolina-thinking-mark span { width: 0.22rem; background: rgb(var(--color-fg-muted)); animation: flamolina-bars 0.9s ease-in-out infinite; }
+.flamolina-thinking-mark span:nth-child(1) { height: 0.45rem; animation-delay: -0.2s; }
+.flamolina-thinking-mark span:nth-child(2) { height: 0.7rem; animation-delay: -0.1s; }
+.flamolina-thinking-mark span:nth-child(3) { height: 0.55rem; }
+@keyframes flamolina-bars { 0%, 100% { transform: scaleY(0.55); opacity: 0.45; } 50% { transform: scaleY(1); opacity: 1; } }
+
+.flamolina-launcher { position: fixed; display: flex; align-items: center; gap: 0.65rem; overflow: hidden; border: 1px solid rgb(var(--color-fg) / 0.22); padding: 0.85rem 1rem; color: rgb(var(--color-bg)); background: rgb(var(--color-fg)); box-shadow: 0 12px 35px rgb(17 17 17 / 0.2); transition: box-shadow 180ms ease; }
+.flamolina-launcher:hover { box-shadow: 0 16px 42px rgb(17 17 17 / 0.27); }
+.flamolina-launcher-orbit { position: absolute; width: 5rem; height: 5rem; left: -2.2rem; top: -2.5rem; border: 1px solid rgb(var(--color-bg) / 0.2); border-radius: 50%; }
+
+@media (max-width: 640px) {
+  .flamolina-modal-positioner { padding: 1rem 0.75rem; }
+  .flamolina-panel { width: calc(100vw - 1.5rem); height: min(740px, calc(100vh - 2rem)); }
+  .flamolina-launcher { right: 0.75rem; bottom: 0.75rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flamolina-thinking-mark span { animation: none; }
+}
