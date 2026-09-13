@@ -54,7 +54,7 @@ This repository contains the source code for [Shivam Tamboli's portfolio](https:
 | --- | --- |
 | **Portfolio homepage** | Hero, About, Projects, Stack, and Contact sections with responsive navigation and animated transitions. |
 | **Editorial visual design** | Cream-and-ink color system, typography-led layouts, dark mode, grain/noise overlay, custom cursor, preloader, and reduced-motion support. |
-| **Project catalogue** | Supabase-backed project records with search, pagination, categories, statuses, technology tags, live URLs, media, and visitor ratings. |
+| **Project catalogue** | Supabase-backed project records with search, pagination, bespoke live actions, GitHub links, detailed case-study pages, screenshot galleries, media, and visitor ratings. |
 | **Blog and journal** | Public blog listing and detail pages with hash-based routing, category support, search, pagination, and Markdown/rich-text content. |
 | **Blog interactions** | Likes, aliases, comments, replies, comment reports, copy actions, admin pinning, and self-service editing/deletion for commenters. |
 | **Admin content management** | Google OAuth-based admin flow for creating, editing, publishing, and deleting blog posts and projects, plus report review. |
@@ -132,7 +132,9 @@ The SQL bootstrap in [`supabase/blogs.sql`](https://github.com/LordCrateis/shiva
 | Database object | Purpose |
 | --- | --- |
 | `blogs` | Blog titles, slugs, excerpts, rich content, categories, publication state, dates, and like counts. |
-| `projects` | Project metadata including category, year, description, technology stack, live URL, status, visibility, and ordering. |
+| `projects` | Project metadata including slug, category, date, summary, Markdown case study, technology stack, live and GitHub URLs, action label, status, visibility, and ordering. |
+| `project_media` | Ordered project screenshots and videos with captions and accessible descriptions. |
+| `project_collaborators` | Ordered project collaborators with names and GitHub profiles used to resolve profile photos. |
 | `blog_comments` | Visitor comments attached to blog posts. |
 | `blog_comment_replies` | Replies to comments, including optional admin avatar metadata. |
 | `blog_comment_reports` | Reports submitted for comment moderation. |
@@ -143,9 +145,7 @@ The SQL enables **row-level security** and permits public reads only where appro
 
 ### Admin Authentication
 
-The admin interface uses Google OAuth through Supabase Auth.
-
-> ⚠️ **Known inconsistency:** the current frontend allowlist in [`src/lib/admin.ts`](https://github.com/LordCrateis/shivam-tamboli-portfolio/blob/main/src/lib/admin.ts) is `shivamrtamboli62@gmail.com`, while the SQL policies in `supabase/blogs.sql` use `shivamtamboli62@gmail.com`. These values differ. **Before using admin features, choose the intended account and make the email identical in both files and in the Supabase Auth configuration.**
+The admin interface uses Google OAuth through Supabase Auth. The frontend allowlist and SQL policies use the same single-admin email defined for this portfolio.
 
 For a deployed site, add the production origin and OAuth callback URL to the Supabase Auth URL configuration. The application also uses the current browser origin when constructing the Google OAuth redirect.
 
@@ -183,6 +183,7 @@ The application uses hash-based navigation rather than a separate router depende
 | `#/blog/visitor` | Visitor blog mode. |
 | `#/blog/team` | Team/admin-oriented blog mode. |
 | `#/blog/<slug>` | Individual blog post. |
+| `#/projects/<slug>` | Individual project case study and screenshot gallery. |
 | `#/profile` | Profile view. |
 | `#/reports` | Admin report view. |
 | `#/<VITE_ADMIN_ROUTE>` | Ephemeral admin OAuth trigger route configured through the environment. |
@@ -232,6 +233,8 @@ VITE_FLAMOLINA_API_URL=http://localhost:8000/chat
 │   │   ├── FlamolinaChat.tsx
 │   │   ├── Hero.tsx
 │   │   ├── Projects.tsx
+│   │   ├── ProjectPage.tsx
+│   │   ├── ProjectGallery.tsx
 │   │   ├── ProjectMedia.tsx
 │   │   ├── ProjectRatings.tsx
 │   │   ├── Stack.tsx
@@ -241,6 +244,7 @@ VITE_FLAMOLINA_API_URL=http://localhost:8000/chat
 │   │   └── useTheme.tsx
 │   ├── lib/
 │   │   ├── admin.ts             # Admin email allowlist and avatar helper
+│   │   ├── projectContent.ts     # Project routes, CTAs, repositories, and case-study defaults
 │   │   └── supabase.ts          # Browser Supabase client
 │   ├── App.tsx                  # Page routing, auth state, and layout
 │   ├── index.css                # Tailwind layers and global visual system
