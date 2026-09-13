@@ -233,7 +233,7 @@ export default function Profile({ isAdminSession }: ProfileProps) {
         setPhotoPreview(null);
         setPendingResumeFile(null);
       }
-    } catch (err) {
+    } catch {
       setError('Save failed. Please try again.');
     } finally {
       setSaving(false);
