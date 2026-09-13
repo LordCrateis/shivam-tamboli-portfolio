@@ -24,12 +24,15 @@ interface MediaRecord {
   source_type: 'upload' | 'embed';
   url: string;
   order_index: number;
+  caption?: string | null;
+  alt_text?: string | null;
 }
 
 interface ProjectMediaProps {
   projectId: string;
   isAdminSession: boolean;
   isHovered?: boolean;
+  onMediaChange?: () => void;
 }
 
 const BUCKET = 'project-media';
@@ -115,18 +118,7 @@ function getEmbedInfo(url: string): { provider: 'youtube' | 'vimeo' | 'other'; e
   return { provider: 'other', embedSrc: url, thumbnail: null };
 }
 
-function formatTime(seconds: number): string {
-  if (!Number.isFinite(seconds)) return '0:00';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60)
-    .toString()
-    .padStart(2, '0');
-  return `${mins}:${secs}`;
-}
-
-
-
-export default function ProjectMedia({ projectId, isAdminSession, isHovered }: ProjectMediaProps) {
+export default function ProjectMedia({ projectId, isAdminSession, isHovered, onMediaChange }: ProjectMediaProps) {
   const [media, setMedia] = useState<MediaRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,6 +127,8 @@ export default function ProjectMedia({ projectId, isAdminSession, isHovered }: P
   const [addKind, setAddKind] = useState<'photo' | 'video'>('photo');
   const [addMode, setAddMode] = useState<'upload' | 'embed'>('upload');
   const [embedUrl, setEmbedUrl] = useState('');
+  const [caption, setCaption] = useState('');
+  const [altText, setAltText] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
@@ -147,17 +141,29 @@ export default function ProjectMedia({ projectId, isAdminSession, isHovered }: P
 
   const fetchMedia = useCallback(async () => {
     setLoading(true);
-    const { data, error: fetchError } = await supabase
+    const extendedResult = await supabase
+      .from('project_media')
+      .select('id,project_id,media_type,source_type,url,order_index,caption,alt_text')
+      .eq('project_id', projectId)
+      .order('order_index', { ascending: true });
+
+    if (!extendedResult.error) {
+      setError(null);
+      setMedia((extendedResult.data ?? []) as MediaRecord[]);
+      setLoading(false);
+      return;
+    }
+
+    const fallbackResult = await supabase
       .from('project_media')
       .select('id,project_id,media_type,source_type,url,order_index')
       .eq('project_id', projectId)
       .order('order_index', { ascending: true });
 
-    if (fetchError) {
-      setError('Unable to load media right now.');
-    } else {
+    if (fallbackResult.error) setError('Unable to load media right now.');
+    else {
       setError(null);
-      setMedia((data ?? []) as MediaRecord[]);
+      setMedia((fallbackResult.data ?? []) as MediaRecord[]);
     }
     setLoading(false);
   }, [projectId]);
@@ -188,6 +194,27 @@ export default function ProjectMedia({ projectId, isAdminSession, isHovered }: P
     setAddKind('photo');
     setAddMode('upload');
     setEmbedUrl('');
+    setCaption('');
+    setAltText('');
+  };
+
+  const insertMediaRecord = async (payload: Omit<MediaRecord, 'id'>) => {
+    const extendedResult = await supabase.from('project_media').insert(payload);
+    if (!extendedResult.error) return null;
+
+    const message = `${extendedResult.error.code ?? ''} ${extendedResult.error.message ?? ''}`.toLowerCase();
+    const missingMetadataColumns = message.includes('caption') || message.includes('alt_text') || message.includes('42703');
+    if (!missingMetadataColumns) return extendedResult.error;
+
+    const basePayload = {
+      project_id: payload.project_id,
+      media_type: payload.media_type,
+      source_type: payload.source_type,
+      url: payload.url,
+      order_index: payload.order_index,
+    };
+    const fallbackResult = await supabase.from('project_media').insert(basePayload);
+    return fallbackResult.error;
   };
 
   const handleFileUpload = async (file: File) => {
@@ -214,21 +241,24 @@ export default function ProjectMedia({ projectId, isAdminSession, isHovered }: P
       const { data: publicUrlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
       const nextOrder = media.reduce((max, item) => Math.max(max, item.order_index), 0) + 1;
 
-      const { error: insertError } = await supabase.from('project_media').insert({
+      const insertError = await insertMediaRecord({
         project_id: projectId,
         media_type: addKind,
         source_type: 'upload',
         url: publicUrlData.publicUrl,
         order_index: nextOrder,
+        caption: caption.trim() || null,
+        alt_text: altText.trim() || null,
       });
 
       if (insertError) {
         setError('Could not save this media item.');
       } else {
         await fetchMedia();
+        onMediaChange?.();
         resetAddPanel();
       }
-    } catch (err) {
+    } catch {
       setError('Upload failed. Please try again.');
     } finally {
       setUploading(false);
@@ -242,18 +272,21 @@ export default function ProjectMedia({ projectId, isAdminSession, isHovered }: P
     setError(null);
 
     const nextOrder = media.reduce((max, item) => Math.max(max, item.order_index), 0) + 1;
-    const { error: insertError } = await supabase.from('project_media').insert({
+    const insertError = await insertMediaRecord({
       project_id: projectId,
       media_type: 'video',
       source_type: 'embed',
       url: embedUrl.trim(),
       order_index: nextOrder,
+      caption: caption.trim() || null,
+      alt_text: altText.trim() || null,
     });
 
     if (insertError) {
       setError('Could not save this video link.');
     } else {
       await fetchMedia();
+      onMediaChange?.();
       resetAddPanel();
     }
     setUploading(false);
@@ -275,6 +308,7 @@ export default function ProjectMedia({ projectId, isAdminSession, isHovered }: P
 
     setPendingDeleteId(null);
     await fetchMedia();
+    onMediaChange?.();
   };
 
   const thumbnailFor = useMemo(
@@ -293,7 +327,6 @@ export default function ProjectMedia({ projectId, isAdminSession, isHovered }: P
     [],
   );
 
-  const totalTileCount = media.length + (isAdminSession ? 1 : 0);
   const isCompactLayout = media.length <= 4;
 
   if (!isAdminSession && media.length === 0 && !loading) {
@@ -369,7 +402,7 @@ export default function ProjectMedia({ projectId, isAdminSession, isHovered }: P
                   data-cursor="pointer"
                 >
                   {thumb.kind === 'image' && (
-                    <img src={thumb.src} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    <img src={thumb.src} alt={item.alt_text?.trim() || ''} className="h-full w-full object-cover" loading="lazy" />
                   )}
                   {thumb.kind === 'video-file' && (
                     <video src={thumb.src} className="h-full w-full object-cover" muted preload="metadata" />
@@ -443,6 +476,20 @@ export default function ProjectMedia({ projectId, isAdminSession, isHovered }: P
 
       {isAdminSession && showAddPanel && (
         <div className="mt-3 border border-ink/15 p-3">
+          <div className="mb-3 grid gap-2 md:grid-cols-2">
+            <input
+              value={caption}
+              onChange={(event) => setCaption(event.target.value)}
+              placeholder="Slide caption (what this screen shows)"
+              className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
+            />
+            <input
+              value={altText}
+              onChange={(event) => setAltText(event.target.value)}
+              placeholder="Image description for accessibility"
+              className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
+            />
+          </div>
           <div className="mb-3 flex flex-wrap gap-2">
             {(['photo', 'video'] as const).map((kind) => (
               <button
@@ -627,7 +674,7 @@ function Lightbox({
         onClick={(event) => event.stopPropagation()}
       >
         {item.media_type === 'photo' && (
-          <img src={item.url} alt="" className="max-h-[80vh] w-full object-contain" />
+          <img src={item.url} alt={item.alt_text?.trim() || ''} className="max-h-[80vh] w-full object-contain" />
         )}
 
         {item.media_type === 'video' && item.source_type === 'upload' && (

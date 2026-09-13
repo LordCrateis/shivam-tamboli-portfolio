@@ -14,10 +14,11 @@ import Blog from './components/Blog';
 import Profile from './components/Profile';
 import BlogReports from './components/BlogReports';
 import FlamolinaChat from './components/FlamolinaChat';
+import ProjectPage from './components/ProjectPage';
 import { hasSupabaseConfig, supabase } from './lib/supabase';
 import { getAdminAvatarUrl, isAdminEmail } from './lib/admin';
 
-type AppPage = 'home' | 'blog' | 'admin' | 'reports' | 'profile';
+type AppPage = 'home' | 'blog' | 'admin' | 'reports' | 'profile' | 'project';
 const ADMIN_OAUTH_REDIRECT_HASH = '/';
 // 'admin' is an ephemeral OAuth trigger state for the secret route, not a rendered page.
 
@@ -33,12 +34,21 @@ function getCurrentPage(): AppPage {
   if (window.location.hash.startsWith('#/profile')) {
     return 'profile';
   }
+  if (window.location.hash.startsWith('#/projects/')) {
+    return 'project';
+  }
   return window.location.hash.startsWith('#/blog') ? 'blog' : 'home';
+}
+
+function getCurrentProjectSlug(): string {
+  if (!window.location.hash.startsWith('#/projects/')) return '';
+  return window.location.hash.slice('#/projects/'.length).split(/[?#]/)[0] || '';
 }
 
 export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [page, setPage] = useState(getCurrentPage);
+  const [projectSlug, setProjectSlug] = useState(getCurrentProjectSlug);
   const [session, setSession] = useState<Session | null>(null);
 
   const isAdminSession = isAdminEmail(session?.user?.email);
@@ -47,6 +57,7 @@ export default function App() {
   useEffect(() => {
     const onRouteChange = () => {
       setPage(getCurrentPage());
+      setProjectSlug(getCurrentProjectSlug());
       if (window.location.hash.startsWith('#/')) {
         window.scrollTo({ top: 0, behavior: 'auto' });
       }
@@ -138,7 +149,7 @@ export default function App() {
             transition={{ duration: 0.6, ease: 'easeOut' }}
           >
             <Nav
-              isBlogPage={page === 'blog' || page === 'reports' || page === 'profile'}
+              isBlogPage={page !== 'home'}
               isAdminSession={isAdminSession}
               adminAvatarUrl={adminAvatarUrl}
               onLogout={handleLogout}
@@ -150,6 +161,8 @@ export default function App() {
                 <BlogReports isAdminSession={isAdminSession} />
               ) : page === 'profile' ? (
                 <Profile isAdminSession={isAdminSession} />
+              ) : page === 'project' ? (
+                <ProjectPage slug={projectSlug} isAdminSession={isAdminSession} />
               ) : (
                 <>
                   <Hero />

@@ -1,24 +1,18 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, Github, Pencil, Plus, Trash2 } from 'lucide-react';
 import FadeUp from './FadeUp';
 import ProjectRatings from './ProjectRatings';
 import { supabase } from '../lib/supabase';
-import ProjectMedia from './ProjectMedia';
-
-interface ProjectRecord {
-  id: string;
-  title: string;
-  category: string | null;
-  year: number | null;
-  project_date: string | null;
-  description: string | null;
-  tech_stack: string[] | null;
-  live_url: string | null;
-  status: 'Deployed' | 'In Progress' | 'Archived' | null;
-  order_index: number | null;
-  visible: boolean | null;
-}
+import {
+  formatProjectDate,
+  getProjectSlug,
+  PROJECT_SELECT_BASE,
+  PROJECT_SELECT_EXTENDED,
+  ProjectRecord,
+  resolveProjectPresentation,
+  slugifyProject,
+} from '../lib/projectContent';
 
 interface ProjectEditorState {
   id: string | null;
@@ -29,6 +23,10 @@ interface ProjectEditorState {
   description: string;
   techStackInput: string;
   liveUrl: string;
+  slug: string;
+  githubUrl: string;
+  liveCtaLabel: string;
+  caseStudy: string;
   status: 'Deployed' | 'In Progress' | 'Archived';
 }
 
@@ -49,6 +47,10 @@ const EMPTY_EDITOR: ProjectEditorState = {
   description: '',
   techStackInput: '',
   liveUrl: '',
+  slug: '',
+  githubUrl: '',
+  liveCtaLabel: '',
+  caseStudy: '',
   status: 'In Progress',
 };
 const SEARCH_ICON_URL = 'https://cdn.jsdelivr.net/npm/lucide-static@0.468.0/icons/search.svg';
@@ -77,16 +79,6 @@ function normalizeCategory(category: string | null | undefined): string {
   return category?.trim() || DEFAULT_PROJECT_CATEGORY;
 }
 
-function formatProjectDate(dateStr: string | null, year: number | null): string {
-  if (dateStr) {
-    const d = new Date(`${dateStr}T00:00:00`);
-    const day = d.getDate();
-    const month = d.toLocaleString('en-US', { month: 'short' });
-    return `${day}, ${month}, ${d.getFullYear()}`;
-  }
-  return year ? String(year) : '—';
-}
-
 interface ProjectsProps {
   isAdminSession: boolean;
 }
@@ -101,6 +93,7 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
   const [saving, setSaving] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [supportsProjectPages, setSupportsProjectPages] = useState(true);
 
   const categoryOptions = useMemo(() => {
     const options = new Set<string>([DEFAULT_PROJECT_CATEGORY]);
@@ -156,22 +149,41 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
     setLoading(true);
     setError(null);
 
-    let query = supabase
+    let extendedQuery = supabase
       .from('projects')
-      .select('id,title,category,year,project_date,description,tech_stack,live_url,status,order_index,visible')
+      .select(PROJECT_SELECT_EXTENDED)
       .order('order_index', { ascending: true })
       .order('year', { ascending: false });
 
     if (!isAdminSession) {
-      query = query.eq('visible', true);
+      extendedQuery = extendedQuery.eq('visible', true);
     }
 
-    const { data, error: fetchError } = await query;
-    if (fetchError) {
+    const extendedResult = await extendedQuery;
+    if (!extendedResult.error) {
+      setSupportsProjectPages(true);
+      setProjects((extendedResult.data ?? []) as ProjectRecord[]);
+      setLoading(false);
+      return;
+    }
+
+    let fallbackQuery = supabase
+      .from('projects')
+      .select(PROJECT_SELECT_BASE)
+      .order('order_index', { ascending: true })
+      .order('year', { ascending: false });
+
+    if (!isAdminSession) {
+      fallbackQuery = fallbackQuery.eq('visible', true);
+    }
+
+    const fallbackResult = await fallbackQuery;
+    setSupportsProjectPages(false);
+    if (fallbackResult.error) {
       setError('Unable to load projects right now.');
       setProjects([]);
     } else {
-      setProjects((data ?? []) as ProjectRecord[]);
+      setProjects((fallbackResult.data ?? []) as ProjectRecord[]);
     }
 
     setLoading(false);
@@ -182,6 +194,7 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
   }, [fetchProjects]);
 
   const handleEdit = (project: ProjectRecord) => {
+    const presentation = resolveProjectPresentation(project);
     setEditor({
       id: project.id,
       title: project.title,
@@ -191,6 +204,10 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
       description: project.description ?? '',
       techStackInput: (project.tech_stack ?? []).join(', '),
       liveUrl: project.live_url ?? '',
+      slug: getProjectSlug(project),
+      githubUrl: presentation.githubUrl,
+      liveCtaLabel: presentation.liveCtaLabel,
+      caseStudy: presentation.caseStudy,
       status: project.status ?? 'In Progress',
     });
   };
@@ -231,7 +248,7 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
       nextOrderIndex = maxOrderIndex + 1;
     }
 
-    const payload = {
+    const basePayload = {
       title: editor.title.trim(),
       category: normalizeCategory(editor.category),
       year: parsedYear,
@@ -245,6 +262,16 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
         ? projects.find((project) => project.id === editor.id)?.order_index ?? nextOrderIndex
         : nextOrderIndex,
     };
+
+    const payload = supportsProjectPages
+      ? {
+          ...basePayload,
+          slug: editor.slug.trim() || slugifyProject(editor.title),
+          github_url: editor.githubUrl.trim() || null,
+          live_cta_label: editor.liveCtaLabel.trim() || null,
+          case_study: editor.caseStudy.trim() || null,
+        }
+      : basePayload;
 
     if (editor.id) {
       const { error: updateError } = await supabase.from('projects').update(payload).eq('id', editor.id);
@@ -281,12 +308,8 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
     await fetchProjects();
   };
 
-  const openProject = (liveUrl: string | null) => {
-    if (!liveUrl) {
-      return;
-    }
-
-    window.open(liveUrl, '_blank', 'noopener,noreferrer');
+  const openProjectPage = (project: ProjectRecord) => {
+    window.location.hash = `/projects/${encodeURIComponent(getProjectSlug(project))}`;
   };
 
   return (
@@ -447,6 +470,44 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
                 />
               </div>
 
+              <div className="grid md:grid-cols-2 gap-4">
+                <input
+                  value={editor.slug}
+                  onChange={(event) => setEditor((prev) => ({ ...prev, slug: slugifyProject(event.target.value) }))}
+                  placeholder="Page slug (generated from title if empty)"
+                  className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
+                  disabled={!supportsProjectPages}
+                />
+                <input
+                  value={editor.githubUrl}
+                  onChange={(event) => setEditor((prev) => ({ ...prev, githubUrl: event.target.value }))}
+                  placeholder="GitHub repository URL"
+                  className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
+                  disabled={!supportsProjectPages}
+                />
+                <input
+                  value={editor.liveCtaLabel}
+                  onChange={(event) => setEditor((prev) => ({ ...prev, liveCtaLabel: event.target.value }))}
+                  placeholder="Live action label (for example: Run a Delay Forecast)"
+                  className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none md:col-span-2"
+                  disabled={!supportsProjectPages}
+                />
+              </div>
+
+              <textarea
+                value={editor.caseStudy}
+                onChange={(event) => setEditor((prev) => ({ ...prev, caseStudy: event.target.value }))}
+                placeholder="Project case study in Markdown"
+                className="min-h-64 w-full border border-ink/20 bg-transparent px-4 py-3 font-mono text-sm outline-none"
+                disabled={!supportsProjectPages}
+              />
+
+              {!supportsProjectPages && (
+                <p className="text-xs leading-relaxed text-ink-muted">
+                  Project-page fields are currently using the built-in portfolio defaults. Apply the updated Supabase schema to edit them here.
+                </p>
+              )}
+
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="submit"
@@ -477,9 +538,9 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
 
       <div className="divide-y divide-ink/10 border-t border-ink/10">
         {paginatedProjects.map((project, i) => {
-  const techTags = project.tech_stack ?? [];
-  const canOpenProject = Boolean(project.live_url);
-  const displayIndex = (page - 1) * PROJECTS_PER_PAGE + i + 1;
+          const techTags = project.tech_stack ?? [];
+          const presentation = resolveProjectPresentation(project);
+          const displayIndex = (page - 1) * PROJECTS_PER_PAGE + i + 1;
 
           return (
             <motion.div
@@ -495,22 +556,19 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
                 style={{
                   backgroundColor: hovered === i ? 'rgba(17,17,17,0.04)' : 'transparent',
                 }}
-                onClick={canOpenProject ? () => openProject(project.live_url) : undefined}
-                onKeyDown={
-                  canOpenProject
-                    ? (event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          openProject(project.live_url);
-                        }
-                      }
-                    : undefined
-                }
+                onClick={() => openProjectPage(project)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openProjectPage(project);
+                  }
+                }}
                 onMouseEnter={() => setHovered(i)}
                 onMouseLeave={() => setHovered(null)}
                 data-cursor="pointer"
-                role={canOpenProject ? 'button' : undefined}
-                tabIndex={canOpenProject ? 0 : undefined}
+                role="link"
+                tabIndex={0}
+                aria-label={`Read the ${project.title} case study`}
               >
                 <motion.div
                   className="absolute left-0 top-0 bottom-0 w-0.5 bg-ink"
@@ -537,6 +595,41 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
                     </div>
                   </div>
 
+                  <div
+                    className="mb-4 flex flex-wrap items-center gap-3"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
+                    {project.live_url && (
+                      <a
+                        href={project.live_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 bg-ink px-3.5 py-2 text-xs uppercase tracking-wide text-cream transition-opacity hover:opacity-80"
+                        data-cursor="pointer"
+                      >
+                        {presentation.liveCtaLabel}
+                        <ArrowUpRight size={13} aria-hidden="true" />
+                      </a>
+                    )}
+                    {presentation.githubUrl && (
+                      <a
+                        href={presentation.githubUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 border border-ink/25 px-3.5 py-2 text-xs uppercase tracking-wide text-ink-muted transition-colors hover:border-ink hover:text-ink"
+                        data-cursor="pointer"
+                      >
+                        <Github size={13} aria-hidden="true" />
+                        View on GitHub
+                        <ArrowUpRight size={12} aria-hidden="true" />
+                      </a>
+                    )}
+                    <span className="terminal-text text-[11px] uppercase tracking-[0.14em] text-ink-muted/80">
+                      Click the project for the full case study
+                    </span>
+                  </div>
+
                   <p className="font-sans text-sm text-ink-muted leading-relaxed mb-4 max-w-2xl">
                     {project.description || 'No description provided.'}
                   </p>
@@ -552,9 +645,9 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
                     </span>
                   </div>
 
-                  <ProjectRatings projectId={project.id} />
-
-<ProjectMedia projectId={project.id} isAdminSession={isAdminSession} isHovered={hovered === i} />
+                  <div onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                    <ProjectRatings projectId={project.id} />
+                  </div>
 
                   {isAdminSession && (
                     <div className="flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>

@@ -103,6 +103,99 @@ body {
   overflow-wrap: break-word;
 }
 
+.project-case-study {
+  color: rgb(var(--color-fg-muted));
+  font-size: 1rem;
+  line-height: 1.9;
+}
+
+.project-case-study h2 {
+  margin: 3.5rem 0 1rem;
+  color: rgb(var(--color-fg));
+  font-family: 'Gloock', serif;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+.project-case-study h2:first-child {
+  margin-top: 0;
+}
+
+.project-case-study h3 {
+  margin: 2.25rem 0 0.75rem;
+  color: rgb(var(--color-fg));
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.project-case-study p,
+.project-case-study ul,
+.project-case-study ol,
+.project-case-study blockquote,
+.project-case-study pre {
+  margin: 0 0 1.25rem;
+}
+
+.project-case-study ul,
+.project-case-study ol {
+  padding-left: 1.4rem;
+}
+
+.project-case-study ul {
+  list-style: disc;
+}
+
+.project-case-study ol {
+  list-style: decimal;
+}
+
+.project-case-study li {
+  margin: 0.4rem 0;
+  padding-left: 0.25rem;
+}
+
+.project-case-study strong {
+  color: rgb(var(--color-fg));
+  font-weight: 600;
+}
+
+.project-case-study a {
+  color: rgb(var(--color-fg));
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--color-fg) / 0.3);
+  text-underline-offset: 0.2em;
+  overflow-wrap: anywhere;
+}
+
+.project-case-study code {
+  background: rgb(var(--color-fg) / 0.06);
+  color: rgb(var(--color-fg));
+  padding: 0.15em 0.35em;
+  font-size: 0.9em;
+}
+
+.project-case-study pre {
+  overflow-x: auto;
+  border: 1px solid rgb(var(--color-fg) / 0.12);
+  background: rgb(var(--color-fg) / 0.04);
+  padding: 1rem;
+}
+
+.project-case-study pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.project-gallery:focus-visible {
+  outline: 2px solid rgb(var(--color-fg) / 0.45);
+  outline-offset: 6px;
+}
+
 ::-webkit-scrollbar {
   width: 4px;
 }
