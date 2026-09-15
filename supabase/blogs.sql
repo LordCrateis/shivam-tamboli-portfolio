@@ -123,15 +123,30 @@ alter table public.projects enable row level security;
 
 drop policy if exists "Public can read projects" on public.projects;
 drop policy if exists "Admin Gmail can manage projects" on public.projects;
+drop policy if exists "Admin can add projects" on public.projects;
+drop policy if exists "Admin can edit projects" on public.projects;
+drop policy if exists "Admin can delete projects" on public.projects;
 
 create policy "Public can read projects"
 on public.projects for select
+to anon, authenticated
 using (true);
 
-create policy "Admin Gmail can manage projects"
-on public.projects for all
-using (lower((auth.jwt() ->> 'email')) = 'shivamrtamboli62@gmail.com')
-with check (lower((auth.jwt() ->> 'email')) = 'shivamrtamboli62@gmail.com');
+create policy "Admin can add projects"
+on public.projects for insert
+to authenticated
+with check (lower(((select auth.jwt()) ->> 'email')) = 'shivamrtamboli62@gmail.com');
+
+create policy "Admin can edit projects"
+on public.projects for update
+to authenticated
+using (lower(((select auth.jwt()) ->> 'email')) = 'shivamrtamboli62@gmail.com')
+with check (lower(((select auth.jwt()) ->> 'email')) = 'shivamrtamboli62@gmail.com');
+
+create policy "Admin can delete projects"
+on public.projects for delete
+to authenticated
+using (lower(((select auth.jwt()) ->> 'email')) = 'shivamrtamboli62@gmail.com');
 
 grant select on table public.projects to anon, authenticated;
 grant insert, update, delete on table public.projects to authenticated;
