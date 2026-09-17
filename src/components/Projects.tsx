@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, Github, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, ChevronLeft, ChevronRight, FileText, Github, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import FadeUp from './FadeUp';
 import ProjectRatings from './ProjectRatings';
 import { supabase } from '../lib/supabase';
@@ -27,6 +27,11 @@ interface ProjectEditorState {
   githubUrl: string;
   liveCtaLabel: string;
   caseStudy: string;
+  includeInResume: boolean;
+  resumeTitle: string;
+  resumeBulletsInput: string;
+  resumeTechStackInput: string;
+  resumeOrder: string;
   status: 'Deployed' | 'In Progress' | 'Archived';
 }
 
@@ -51,6 +56,11 @@ const EMPTY_EDITOR: ProjectEditorState = {
   githubUrl: '',
   liveCtaLabel: '',
   caseStudy: '',
+  includeInResume: false,
+  resumeTitle: '',
+  resumeBulletsInput: '',
+  resumeTechStackInput: '',
+  resumeOrder: '0',
   status: 'In Progress',
 };
 const SEARCH_ICON_URL = 'https://cdn.jsdelivr.net/npm/lucide-static@0.468.0/icons/search.svg';
@@ -94,6 +104,8 @@ export default function Projects({ isAdminSession }: ProjectsProps) {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [supportsProjectPages, setSupportsProjectPages] = useState(true);
+  const [resumeNotice, setResumeNotice] = useState<string | null>(null);
+  const [generatingResume, setGeneratingResume] = useState(false);
 
   const categoryOptions = useMemo(() => {
     const options = new Set<string>([DEFAULT_PROJECT_CATEGORY]);
@@ -208,8 +220,25 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
       githubUrl: presentation.githubUrl,
       liveCtaLabel: presentation.liveCtaLabel,
       caseStudy: presentation.caseStudy,
+      includeInResume: project.include_in_resume ?? false,
+      resumeTitle: project.resume_title ?? project.title,
+      resumeBulletsInput: (project.resume_bullets ?? []).join('\n'),
+      resumeTechStackInput: (project.resume_tech_stack ?? project.tech_stack ?? []).join(', '),
+      resumeOrder: String(project.resume_order ?? 0),
       status: project.status ?? 'In Progress',
     });
+  };
+
+  const triggerResumeGeneration = async () => {
+    setGeneratingResume(true);
+    setResumeNotice('Regenerating resume…');
+    const { error: functionError } = await supabase.functions.invoke('generate-resume');
+    if (functionError) {
+      setResumeNotice('Project saved, but GitHub resume generation could not be queued.');
+    } else {
+      setResumeNotice('Resume generation queued in GitHub Actions.');
+    }
+    setGeneratingResume(false);
   };
 
   const openNewEditor = () => {
@@ -228,6 +257,15 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
     setError(null);
 
     const techStack = editor.techStackInput
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const resumeBullets = editor.resumeBulletsInput
+      .split('\n')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    const resumeTechStack = editor.resumeTechStackInput
       .split(',')
       .map((item) => item.trim())
       .filter(Boolean);
@@ -270,6 +308,11 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
           github_url: editor.githubUrl.trim() || null,
           live_cta_label: editor.liveCtaLabel.trim() || null,
           case_study: editor.caseStudy.trim() || null,
+          include_in_resume: editor.includeInResume,
+          resume_title: editor.resumeTitle.trim() || editor.title.trim(),
+          resume_bullets: resumeBullets,
+          resume_tech_stack: resumeTechStack,
+          resume_order: Number(editor.resumeOrder) || 0,
         }
       : basePayload;
 
@@ -292,6 +335,7 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
     setEditor(EMPTY_EDITOR);
     await fetchProjects();
     setSaving(false);
+    await triggerResumeGeneration();
   };
 
   const handleDelete = async (id: string) => {
@@ -306,6 +350,26 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
       setEditor(EMPTY_EDITOR);
     }
     await fetchProjects();
+    await triggerResumeGeneration();
+  };
+
+  const handleResumeToggle = async (project: ProjectRecord) => {
+    const nextValue = !(project.include_in_resume ?? false);
+    setError(null);
+    const { error: updateError } = await supabase
+      .from('projects')
+      .update({ include_in_resume: nextValue })
+      .eq('id', project.id);
+
+    if (updateError) {
+      setError('Unable to change this project\'s resume setting.');
+      return;
+    }
+
+    setProjects((current) => current.map((item) => (
+      item.id === project.id ? { ...item, include_in_resume: nextValue } : item
+    )));
+    await triggerResumeGeneration();
   };
 
   const openProjectPage = (project: ProjectRecord) => {
@@ -502,6 +566,55 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
                 disabled={!supportsProjectPages}
               />
 
+              <div className="border border-ink/15 p-4 space-y-4">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={editor.includeInResume}
+                    onChange={(event) => setEditor((prev) => ({ ...prev, includeInResume: event.target.checked }))}
+                    className="mt-1 h-4 w-4 accent-current"
+                    disabled={!supportsProjectPages}
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-ink">Include this project in the generated resume</span>
+                    <span className="block text-xs leading-relaxed text-ink-muted">Resume copy stays separate from the longer portfolio case study.</span>
+                  </span>
+                </label>
+
+                {editor.includeInResume && (
+                  <div className="space-y-4 border-t border-ink/10 pt-4">
+                    <div className="grid gap-4 md:grid-cols-[1fr_9rem]">
+                      <input
+                        value={editor.resumeTitle}
+                        onChange={(event) => setEditor((prev) => ({ ...prev, resumeTitle: event.target.value }))}
+                        placeholder="Resume project title"
+                        className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
+                      />
+                      <input
+                        type="number"
+                        value={editor.resumeOrder}
+                        onChange={(event) => setEditor((prev) => ({ ...prev, resumeOrder: event.target.value }))}
+                        placeholder="Order"
+                        aria-label="Resume project order"
+                        className="border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
+                      />
+                    </div>
+                    <textarea
+                      value={editor.resumeBulletsInput}
+                      onChange={(event) => setEditor((prev) => ({ ...prev, resumeBulletsInput: event.target.value }))}
+                      placeholder={'Resume bullets — one per line, maximum three'}
+                      className="min-h-28 w-full border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
+                    />
+                    <input
+                      value={editor.resumeTechStackInput}
+                      onChange={(event) => setEditor((prev) => ({ ...prev, resumeTechStackInput: event.target.value }))}
+                      placeholder="Resume tech stack (comma-separated)"
+                      className="w-full border border-ink/20 bg-transparent px-4 py-3 text-sm outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+
               {!supportsProjectPages && (
                 <p className="text-xs leading-relaxed text-ink-muted">
                   Project-page fields are currently using the built-in portfolio defaults. Apply the updated Supabase schema to edit them here.
@@ -528,6 +641,9 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
                   </button>
                 )}
               </div>
+              {resumeNotice && (
+                <p className="text-xs leading-relaxed text-ink-muted">{resumeNotice}</p>
+              )}
             </form>
           </div>
         </FadeUp>
@@ -651,6 +767,20 @@ const pageList = useMemo(() => buildPageList(page, totalPages), [page, totalPage
 
                   {isAdminSession && (
                     <div className="flex flex-wrap items-center gap-2" onClick={(event) => event.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => void handleResumeToggle(project)}
+                        disabled={generatingResume}
+                        className={`inline-flex items-center gap-1 border px-3 py-1.5 text-xs uppercase tracking-wide disabled:opacity-60 ${
+                          project.include_in_resume
+                            ? 'border-ink bg-ink text-cream'
+                            : 'border-ink/20 text-ink-muted'
+                        }`}
+                        data-cursor="pointer"
+                      >
+                        {generatingResume ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+                        {project.include_in_resume ? 'In Resume' : 'Add to Resume'}
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleEdit(project)}

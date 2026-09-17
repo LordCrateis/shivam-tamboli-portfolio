@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Download, Eye, FileText, Loader2, Pencil, Save, X } from 'lucide-react';
 import FadeUp from './FadeUp';
 import { hasSupabaseConfig, supabase } from '../lib/supabase';
+import ResumeSettings from './ResumeSettings';
 
 const PROFILE_ID = 'a0000000-0000-0000-0000-000000000001';
 const PHOTO_BUCKET = 'profile-photos';
@@ -291,6 +292,8 @@ export default function Profile({ isAdminSession }: ProfileProps) {
       </FadeUp>
 
       {error && <p className="text-sm text-red-600 mb-6">{error}</p>}
+
+      {isAdminSession && <ResumeSettings />}
 
       {isEditing ? (
         <FadeUp delay={0.1}>

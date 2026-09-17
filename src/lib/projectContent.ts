@@ -16,6 +16,11 @@ export interface ProjectRecord {
   github_url?: string | null;
   live_cta_label?: string | null;
   case_study?: string | null;
+  include_in_resume?: boolean | null;
+  resume_title?: string | null;
+  resume_bullets?: string[] | null;
+  resume_tech_stack?: string[] | null;
+  resume_order?: number | null;
 }
 
 interface ProjectPreset {
@@ -30,7 +35,7 @@ export const PROJECT_SELECT_BASE =
   'id,title,category,year,project_date,description,tech_stack,live_url,status,order_index,visible';
 
 export const PROJECT_SELECT_EXTENDED =
-  `${PROJECT_SELECT_BASE},slug,github_url,live_cta_label,case_study`;
+  `${PROJECT_SELECT_BASE},slug,github_url,live_cta_label,case_study,include_in_resume,resume_title,resume_bullets,resume_tech_stack,resume_order`;
 
 const PROJECT_PRESETS: Record<string, ProjectPreset> = {
   'nutricore ai': {

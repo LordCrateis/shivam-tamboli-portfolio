@@ -77,6 +77,11 @@ alter table public.projects add column if not exists project_date date;
 alter table public.projects add column if not exists github_url text;
 alter table public.projects add column if not exists live_cta_label text;
 alter table public.projects add column if not exists case_study text;
+alter table public.projects add column if not exists include_in_resume boolean not null default false;
+alter table public.projects add column if not exists resume_title text;
+alter table public.projects add column if not exists resume_bullets text[] not null default '{}';
+alter table public.projects add column if not exists resume_tech_stack text[] not null default '{}';
+alter table public.projects add column if not exists resume_order integer not null default 0;
 
 update public.projects
 set
