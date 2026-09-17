@@ -1,0 +1,58 @@
+name: Generate portfolio resume
+
+on:
+  repository_dispatch:
+    types: [generate-resume]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: portfolio-resume
+  cancel-in-progress: true
+
+jobs:
+  compile-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PORTFOLIO_SUPABASE_URL: ${{ secrets.PORTFOLIO_SUPABASE_URL }}
+      PORTFOLIO_SUPABASE_SECRET_KEY: ${{ secrets.PORTFOLIO_SUPABASE_SECRET_KEY }}
+
+    steps:
+      - name: Check out the portfolio
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci
+
+      - name: Restore generated LaTeX source
+        env:
+          TEX_BASE64: ${{ github.event.client_payload.tex_base64 }}
+        shell: bash
+        run: |
+          test -n "$TEX_BASE64"
+          printf '%s' "$TEX_BASE64" | base64 --decode > resume.tex
+
+      - name: Install LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends texlive-latex-base texlive-latex-extra texlive-fonts-recommended
+
+      - name: Compile Jake's Resume template
+        run: pdflatex -no-shell-escape -interaction=nonstopmode -halt-on-error resume.tex
+
+      - name: Upload PDF and update portfolio link
+        run: node scripts/publish-generated-resume.mjs success
+
+      - name: Record a failed generation
+        if: ${{ failure() }}
+        env:
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node scripts/publish-generated-resume.mjs failure

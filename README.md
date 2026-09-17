@@ -301,3 +301,17 @@ When changing a data-backed feature, update the React component, SQL schema or p
 <p align="center">
   Built by <a href="https://github.com/LordCrateis">Shivam Tamboli</a>
 </p>
+# Generated resume
+
+The admin project editor can keep resume-specific project copy separate from portfolio copy. A project can be toggled into the resume from its card or editor, with a dedicated title, up to three bullets, tech stack, and ordering value.
+
+Static resume content (contact details, education, experience, and skills) is managed from the admin Profile page. Saving either project or static content invokes the `generate-resume` Supabase Edge Function. The function fills the locked Jake's Resume template and dispatches the `Generate portfolio resume` GitHub Actions workflow. GitHub compiles the PDF, uploads it to `resume-files/generated/shivam-tamboli-resume.pdf`, and updates `profile.resume_url`.
+
+Setup order:
+
+1. Apply `supabase/resume_generation.sql`.
+2. Deploy `supabase/functions/generate-resume` with JWT verification enabled.
+3. Add `GITHUB_DISPATCH_TOKEN` and `GITHUB_REPOSITORY` as Supabase Edge Function secrets.
+4. Add `PORTFOLIO_SUPABASE_URL` and `PORTFOLIO_SUPABASE_SECRET_KEY` as GitHub Actions repository secrets.
+
+The workflow is stored in `.github/workflows/generate-resume.yml`; the publishing script is `scripts/publish-generated-resume.mjs`.
