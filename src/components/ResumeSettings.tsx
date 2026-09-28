@@ -33,6 +33,7 @@ interface ResumeSettingsRecord {
   location: string | null;
   linkedin_url: string | null;
   github_url: string | null;
+  portfolio_url: string | null;
   education: EducationItem[];
   experience: ExperienceItem[];
   skills: SkillItem[];
@@ -49,6 +50,7 @@ const EMPTY_SETTINGS: ResumeSettingsRecord = {
   location: '',
   linkedin_url: '',
   github_url: 'https://github.com/LordCrateis',
+  portfolio_url: 'https://shivambuilds.dev',
   education: [],
   experience: [],
   skills: [],
@@ -104,6 +106,7 @@ export default function ResumeSettings() {
       location: settings.location?.trim() || null,
       linkedin_url: settings.linkedin_url?.trim() || null,
       github_url: settings.github_url?.trim() || null,
+      portfolio_url: settings.portfolio_url?.trim() || null,
       education: settings.education.map((item) => ({ ...item, details: item.details.filter(Boolean) })),
       experience: settings.experience.map((item) => ({ ...item, bullets: item.bullets.filter(Boolean) })),
       skills: settings.skills.filter((item) => item.label.trim() || item.items.trim()),
@@ -150,6 +153,7 @@ export default function ResumeSettings() {
         <input className={inputClass} value={settings.location ?? ''} placeholder="Location" onChange={(e) => setSettings((s) => ({ ...s, location: e.target.value }))} />
         <input className={inputClass} value={settings.linkedin_url ?? ''} placeholder="LinkedIn URL" onChange={(e) => setSettings((s) => ({ ...s, linkedin_url: e.target.value }))} />
         <input className={inputClass} value={settings.github_url ?? ''} placeholder="GitHub URL" onChange={(e) => setSettings((s) => ({ ...s, github_url: e.target.value }))} />
+        <input className={inputClass} value={settings.portfolio_url ?? ''} placeholder="Portfolio URL" onChange={(e) => setSettings((s) => ({ ...s, portfolio_url: e.target.value }))} />
       </div>
 
       <SectionTitle title="Education" onAdd={() => setSettings((s) => ({ ...s, education: [...s.education, { school: '', location: '', degree: '', dates: '', details: [] }] }))} />
