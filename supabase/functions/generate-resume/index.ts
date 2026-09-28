@@ -67,7 +67,10 @@ function makeExperience(items: Experience[]): string {
   if (!items.length) return "";
   const rows = items.map((item) => {
     const bullets = (item.bullets ?? []).filter(Boolean);
-    return `    \\resumeSubheading\n      {${escapeLatex(item.role)}}{${escapeLatex(item.dates)}}\n      {${escapeLatex(item.company)}}{${escapeLatex(item.location)}}\n      \\resumeItemListStart\n${bullets.map((bullet) => `        \\resumeItem{${escapeLatex(bullet)}}`).join("\n")}\n      \\resumeItemListEnd`;
+    const bulletBlock = bullets.length
+      ? `\n      \\resumeItemListStart\n${bullets.map((bullet) => `        \\resumeItem{${escapeLatex(bullet)}}`).join("\n")}\n      \\resumeItemListEnd`
+      : "";
+    return `    \\resumeSubheading\n      {${escapeLatex(item.role)}}{${escapeLatex(item.dates)}}\n      {${escapeLatex(item.company)}}{${escapeLatex(item.location)}}${bulletBlock}`;
   }).join("\n");
   return `\\section{Experience}\n  \\resumeSubHeadingListStart\n${rows}\n  \\resumeSubHeadingListEnd`;
 }
@@ -94,8 +97,11 @@ function makeProjects(projects: Array<Record<string, unknown>>): string {
     if (projectUrl) parts.push(link(projectUrl, linkLabel));
     const heading = parts.join(" $|$ ");
     const date = escapeLatex(formatProjectDate(project.project_date || project.year || ""));
-    const bullets = ((project.resume_bullets as string[] | null) ?? []).slice(0, 3);
-    return `    \\resumeProjectHeading\n      {${heading}}{${date}}\n      \\resumeItemListStart\n${bullets.map((bullet) => `        \\resumeItem{${escapeLatex(bullet)}}`).join("\n")}\n      \\resumeItemListEnd`;
+    const bullets = ((project.resume_bullets as string[] | null) ?? []).filter(Boolean).slice(0, 3);
+    const bulletBlock = bullets.length
+      ? `\n      \\resumeItemListStart\n${bullets.map((bullet) => `        \\resumeItem{${escapeLatex(bullet)}}`).join("\n")}\n      \\resumeItemListEnd`
+      : "";
+    return `    \\resumeProjectHeading\n      {${heading}}{${date}}${bulletBlock}`;
   }).join("\n");
   return `\\section{Projects}\n  \\resumeSubHeadingListStart\n${rows}\n  \\resumeSubHeadingListEnd`;
 }
