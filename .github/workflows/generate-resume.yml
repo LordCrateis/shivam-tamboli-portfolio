@@ -40,6 +40,9 @@ jobs:
           test -n "$TEX_BASE64"
           printf '%s' "$TEX_BASE64" | base64 --decode > resume.tex
 
+      - name: Show project headings in generated source
+        run: grep -n "resumeProjectHeading" -A1 resume.tex
+
       - name: Install LaTeX
         run: |
           sudo apt-get update
