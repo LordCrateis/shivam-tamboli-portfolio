@@ -85,7 +85,8 @@ function formatProjectDate(value: unknown): string {
   return `${names[month - 1]} ${match[1]}`;
 }
 
-function makeProjects(projects: Array<Record<string, unknown>>): string {
+function makeProjects(allProjects: Array<Record<string, unknown>>): string {
+  const projects = allProjects.filter((p) => ((p.resume_bullets as string[] | null) ?? []).some(Boolean));
   if (!projects.length) return "";
   const rows = projects.map((project) => {
     const title = escapeLatex(project.resume_title || project.title);
