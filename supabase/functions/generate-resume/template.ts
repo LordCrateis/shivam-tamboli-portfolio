@@ -51,7 +51,7 @@ export const JAKES_RESUME_TEMPLATE = String.raw`% Jake's Resume — Jake Gutierr
 \begin{document}
 {{HEADER}}
 {{EDUCATION}}
-{{EXPERIENCE}}
-{{PROJECTS}}
 {{SKILLS}}
+{{PROJECTS}}
+{{EXPERIENCE}}
 \end{document}`;

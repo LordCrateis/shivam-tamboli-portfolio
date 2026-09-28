@@ -41,11 +41,12 @@ function link(value: string | null, label?: string): string {
 
 function makeHeader(settings: Record<string, unknown>): string {
   const contacts = [
-    settings.phone ? escapeLatex(settings.phone) : "",
     settings.email ? link(`mailto:${settings.email}`, String(settings.email)) : "",
+    settings.phone ? escapeLatex(settings.phone) : "",
+    settings.location ? escapeLatex(settings.location) : "",
     settings.linkedin_url ? link(String(settings.linkedin_url)) : "",
     settings.github_url ? link(String(settings.github_url)) : "",
-    settings.location ? escapeLatex(settings.location) : "",
+    settings.portfolio_url ? link(String(settings.portfolio_url)) : "",
   ].filter(Boolean);
   return `\\begin{center}\n  \\textbf{\\Huge \\scshape ${escapeLatex(settings.full_name)}} \\\\ \\vspace{1pt}\n  \\small ${contacts.join(" $|$ ")}\n\\end{center}`;
 }
@@ -71,13 +72,28 @@ function makeExperience(items: Experience[]): string {
   return `\\section{Experience}\n  \\resumeSubHeadingListStart\n${rows}\n  \\resumeSubHeadingListEnd`;
 }
 
+function formatProjectDate(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  const match = raw.match(/^(\d{4})-(\d{2})(?:-\d{2})?(?:T.*)?$/);
+  if (!match) return raw;
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return raw;
+  const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${names[month - 1]} ${match[1]}`;
+}
+
 function makeProjects(projects: Array<Record<string, unknown>>): string {
   if (!projects.length) return "";
   const rows = projects.map((project) => {
     const title = escapeLatex(project.resume_title || project.title);
     const stack = (project.resume_tech_stack as string[] | null) ?? [];
-    const heading = stack.length ? `\\textbf{${title}} $|$ \\emph{${stack.map(escapeLatex).join(", ")}}` : `\\textbf{${title}}`;
-    const date = escapeLatex(project.project_date || project.year || "");
+    const projectUrl = project.resume_link ? String(project.resume_link) : "";
+    const linkLabel = /github\.com/i.test(projectUrl) ? "GitHub" : "Live";
+    const parts = [`\\textbf{${title}}`];
+    if (stack.length) parts.push(`\\emph{${stack.map(escapeLatex).join(", ")}}`);
+    if (projectUrl) parts.push(link(projectUrl, linkLabel));
+    const heading = parts.join(" $|$ ");
+    const date = escapeLatex(formatProjectDate(project.project_date || project.year || ""));
     const bullets = ((project.resume_bullets as string[] | null) ?? []).slice(0, 3);
     return `    \\resumeProjectHeading\n      {${heading}}{${date}}\n      \\resumeItemListStart\n${bullets.map((bullet) => `        \\resumeItem{${escapeLatex(bullet)}}`).join("\n")}\n      \\resumeItemListEnd`;
   }).join("\n");
@@ -116,7 +132,7 @@ Deno.serve(async (req: Request) => {
     await admin.from("resume_settings").update({ generation_status: "generating", generation_error: null }).eq("id", SETTINGS_ID);
     const [settingsResult, projectsResult] = await Promise.all([
       admin.from("resume_settings").select("*").eq("id", SETTINGS_ID).single(),
-      admin.from("projects").select("title,year,project_date,resume_title,resume_bullets,resume_tech_stack,resume_order,order_index").eq("include_in_resume", true).order("resume_order").order("order_index"),
+      admin.from("projects").select("title,year,project_date,resume_title,resume_bullets,resume_tech_stack,resume_link,resume_order,order_index"),
     ]);
     if (settingsResult.error) throw settingsResult.error;
     if (projectsResult.error) throw projectsResult.error;
